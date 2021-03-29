@@ -15,10 +15,6 @@ from multiprocessing import Pool, cpu_count
 # %%
 
 # Population density graph config
-#LOW_LIMIT     = 0.0
-#HIGH_LIMIT    = 0.6
-#STEP          = 0.1
-#ITER_PER_STEP = 20
 LOW_LIMIT     = 0.0
 HIGH_LIMIT    = 0.6
 STEP          = 0.1
@@ -34,8 +30,6 @@ class Plot:
     def __init__(self, percents, title):
         self.sim_idx = 0
         self.num_per_step = np.zeros(ITER_PER_STEP)
-        #self.fig, ax = None, None
-        #self.ax = ax
         self.percents = percents
         self.title = title
 
@@ -71,8 +65,6 @@ class Plot:
         ax.vlines(self.percents, ymin=self.ts_avg - self.ts_std/2, ymax=self.ts_avg + self.ts_std/2, colors="black")
         ax.bar(self.percents, height=self.ts_max - self.ts_min, bottom=self.ts_min, width=STEP, color="lightgrey")
 
-    #@staticmethod
-    #def save(path):
     def save(self, path):
         files = glob.glob(path + "*.png")
         num = len(files) + 1
@@ -84,9 +76,6 @@ if __name__ == "__main__":
     percents = np.arange(LOW_LIMIT, HIGH_LIMIT + STEP, STEP)
     num_steps = len(percents)
 
-    #fig, (ax1, ax2) = plt.subplots(1, 2)
-    #death_rate = Plot(ax1, percents, title="Average death rate")
-    #num_iter   = Plot(ax2, percents, title="Average duration")
     death_rate = Plot(percents, title="Average death rate")
     num_iter   = Plot(percents, title="Average duration")
 
@@ -114,5 +103,4 @@ if __name__ == "__main__":
     death_rate.save(path + "death-")
 
     num_iter.plot()
-    #Plot.save(path)
     num_iter.save(path + "iter-")
