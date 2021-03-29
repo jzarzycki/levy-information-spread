@@ -22,18 +22,27 @@ class Simulation:
     LAST_ITER = 0
 
 
-    def __init__(self, N, M, L, max_iter):
+    def __init__(self, N, M, L, max_iter, logging=False):
         self.N        = N     # grid size
         self.M        = M    # population size
         self.L        = L      # lifespan
         self.max_iter = max_iter
+        self.logging = logging
 
         # plot data
         self.TS_SICK  = np.zeros(self.max_iter)
+        self.TS_DEAD = np.zeros(self.max_iter)
 
 
     def run(self, seed):
         # TODO: SEED RANDOM NUMBER GENERATOR!!!
+
+        if self.N <= 0 or self.M <= 0:
+            return {
+                "LAST_ITER": self.LAST_ITER,
+                "TS_SICK": self.TS_SICK,
+                "TS_DEAD": self.TS_DEAD
+            }
 
         # population information
         dtype = [
@@ -102,11 +111,17 @@ class Simulation:
 
             # save plot data
             self.TS_SICK[iteration] = n_sick
+            self.TS_DEAD[iteration] = n_dead
             iteration += 1
-            print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
+            if self.logging:
+                print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
 
-        self.LAST_ITER = iteration
-
+        self.LAST_ITER = iteration - 1
+        return {
+                "LAST_ITER": self.LAST_ITER,
+                "TS_SICK": self.TS_SICK,
+                "TS_DEAD": self.TS_DEAD
+        }
 
     def show_plot(self):
         plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
@@ -114,8 +129,7 @@ class Simulation:
         plt.show()
 
 
-    def save_plot(self):
-        path="/home/janek/code/PG/magisterka/repo/test_figures/sort-"
+    def save_plot(self, path):
         files = glob.glob(path + "*.png")
         num = len(files) + 1
 
