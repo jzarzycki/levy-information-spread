@@ -5,7 +5,10 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
-from array_index import PositionIndex
+if __name__ == '__main__':
+    from index import PositionIndex
+else:
+    from simulation.index import PositionIndex
 
 
 class Simulation:
