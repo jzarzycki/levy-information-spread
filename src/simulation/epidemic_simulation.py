@@ -139,6 +139,6 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    simulation = Simulation(N=128, M=4000, L=20, max_iter=10000)
+    simulation = Simulation(N=128, M=128**2, L=20, max_iter=10000, logging=True)
     simulation.run(123)
     simulation.show_plot()
