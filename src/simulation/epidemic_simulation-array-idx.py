@@ -1,100 +1,134 @@
 #!/usr/bin/env python3
 
+import glob
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from array_index import PositionIndex
 
-N        = 128
-M        = N**2
-#M        = 4000
-L        = 20
-MAX_ITER = 10000
-
-HEALTHY  = 0
-INFECTED = 1
-DEAD     = 2
-
-x_step   = np.array([-1, 0, 1, 0], dtype=int)
-y_step   = np.array([0, -1, 0, 1], dtype=int)
-
-x, y     = np.zeros(M, dtype=int), np.zeros(M, dtype=int)
-infect   = np.zeros(M, dtype=int)
-lifespan = np.zeros(M, dtype=int)
-
-# my optimizations
-# TODO: use infcted_list - after implementing SIRE
-# TODO: add exposed_list? - probably not needed - can just keep in infected list and check in code for type
-infected_list = -np.ones(M, dtype=int) # fill with minus ones
 
 class Simulation:
-index = PositionIndex(grid_x=N, grid_y=N)
 
-ts_sick  = np.zeros(MAX_ITER, dtype=int)
+    HEALTHY  = 0
+    INFECTED = 1
+    DEAD     = 2
 
-for j in range(M):
-    x[j] = np.random.randint(0, N)
-    y[j] = np.random.randint(0, N)
-    lifespan[j] = L
-    index.append_index((x[j], y[j]), j)
+    X_STEP   = np.array([-1, 0, 1, 0], dtype=int)
+    Y_STEP   = np.array([0, -1, 0, 1], dtype=int)
 
-jj = np.random.randint(0, M-1)
-infect[jj] = 1
-n_sick, n_dead, iterate = 1, 0, 0
-infected_list[0] = jj
 
-while (n_sick > 0) and (iterate < MAX_ITER):
-    new_infect = infect.copy() # TODO: optimize this bug fix
+    def __init__(self, N, M, L, max_iter, logging=False):
+        self.N        = N
+        self.M        = M
+        self.L        = L
+        self.MAX_ITER = max_iter
+        self.logging  = logging
 
-    for j in range(0, M): # TODO: iterate only over infected and exposed (after implementing SIRE)
+        # plot data
+        self.TS_SICK   = np.zeros(max_iter, dtype=int)
+        self.TS_DEAD   = np.zeros(max_iter, dtype=int)
+        self.LAST_ITER = 0
 
-        if infect[j] != DEAD:
-            ii = np.random.randint(4)
 
-            new_x = x[j] + x_step[ii]
-            new_y = y[j] + y_step[ii]
-            new_x = min(N - 1, max(new_x, 1))
-            new_y = min(N - 1, max(new_y, 1))
+    def run(self, seed):
+        # TODO: use/delete the seed param
 
-            index.remove_index((x[j], y[j]), j)
-            index.append_index((new_x, new_y), j)
+        if self.N <= 0 or self.M <= 0:
+            return {
+                    "LAST_ITER": self.LAST_ITER,
+                    "TS_SICK": self.TS_SICK,
+                    "TS_DEAD": self.TS_DEAD
+            }
+
+        x, y     = np.zeros(self.M, dtype=int), np.zeros(self.M, dtype=int)
+        infect   = np.zeros(self.M, dtype=int)
+        lifespan = np.zeros(self.M, dtype=int)
+
+        # my optimizations
+        # TODO: use infcted_list - after implementing SIRE
+        # TODO: add exposed_list? - probably not needed - can just keep in infected list and check in code for type
+        infected_list = -np.ones(self.M, dtype=int) # fill with minus ones
+        index = PositionIndex(grid_x=self.N, grid_y=self.N)
+
+
+        for j in range(self.M):
+            x[j] = np.random.randint(0, self.N)
+            y[j] = np.random.randint(0, self.N)
+            lifespan[j] = self.L
+            index.append_index((x[j], y[j]), j)
+
+        jj = np.random.randint(0, self.M-1)
+        infect[jj] = 1
+        n_sick, n_dead, iteration = 1, 0, 0
+        infected_list[0] = jj
+
+        while (n_sick > 0) and (iteration < self.MAX_ITER):
+            # TODO: UNUSED FIX???
+            new_infect = infect.copy() # TODO: optimize this bug fix
+
+            for j in range(0, self.M): # TODO: iterate only over infected and exposed (after implementing SIRE)
             
-            x[j] = new_x
-            y[j] = new_y
+                if infect[j] != self.DEAD:
+                    ii = np.random.randint(4)
 
-        if infect[j] == 1:
+                    new_x = x[j] + self.X_STEP[ii]
+                    new_y = y[j] + self.Y_STEP[ii]
+                    new_x = min(self.N - 1, max(new_x, 1))
+                    new_y = min(self.N - 1, max(new_y, 1))
 
-            lifespan[j] -= 1
+                    index.remove_index((x[j], y[j]), j)
+                    index.append_index((new_x, new_y), j)
 
-            if lifespan[j] <= 0:
-                infect[j] = 2
-                n_sick -= 1
-                n_dead += 1
-                index.remove_index((x[j], y[j]), j)
+                    x[j] = new_x
+                    y[j] = new_y
 
-            same_position = index.get_index((x[j], y[j]))
-            #print(same_position)
-            for k in same_position:
-                if infect[k] == 0 and k != j:
-                    infect[k] = 1
-                    lifespan[k] = L
-                    n_sick += 1
+                if infect[j] == 1:
+                
+                    lifespan[j] -= 1
 
-    ts_sick[iterate] = n_sick
-    iterate += 1
-    print(f"I:{iterate}, sick:{round(n_sick / M * 100, 2)}%, dead:{round(n_dead / M * 100, 2)}%.")
+                    if lifespan[j] <= 0:
+                        infect[j] = 2
+                        n_sick -= 1
+                        n_dead += 1
+                        index.remove_index((x[j], y[j]), j)
 
-MODE = 'show'
-if MODE == 'show':
-    plt.plot(np.arange(iterate + 10), ts_sick[0:iterate + 10]/M * 100) # percent
-    # plt.plot(range(0, iterate + 10), ts_sick[0:iterate + 10])
-    plt.show()
-elif MODE == 'save':
-    import glob
-    path="/home/janek/code/PG/magisterka/repo/test_figures/orig-"
-    files = glob.glob(path + "*.png")
-    num = len(files) + 1
+                    same_position = index.get_index((x[j], y[j]))
+                    for k in same_position:
+                        if infect[k] == 0 and k != j:
+                            infect[k] = 1
+                            lifespan[k] = self.L
+                            n_sick += 1
 
-    plt.plot(np.arange(iterate + 10), ts_sick[0:iterate + 10]/M * 100) # percent
-    # plt.plot(range(0, iterate + 10), ts_sick[0:iterate + 10])
-    plt.savefig(path + str(num) + ".png")
+            self.TS_SICK[iteration] = n_sick
+            self.TS_DEAD[iteration] = n_dead
+            iteration += 1
+            if self.logging:
+                print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
+
+        self.LAST_ITER = iteration - 1
+        return {
+                "LAST_ITER": self.LAST_ITER,
+                "TS_SICK": self.TS_SICK,
+                "TS_DEAD": self.TS_DEAD
+        }
+
+
+    def show_plot(self):
+        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
+        plt.show()
+
+
+    def save_plot(self, path):
+        files = glob.glob(path + "*.png")
+        num = len(files) + 1
+
+        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
+        # plt.plot(range(0, self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10])
+        plt.savefig(path + str(num) + ".png")
+
+
+if __name__ == "__main__":
+    simulation = Simulation(N=128, M=128**2, L=20, max_iter=10000, logging=True)
+    simulation.run(123)
+    simulation.show_plot()

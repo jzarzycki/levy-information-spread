@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class PositionIndex:
 
     def __init__(self, grid_x, grid_y=1):
