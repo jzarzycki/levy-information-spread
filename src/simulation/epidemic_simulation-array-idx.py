@@ -3,11 +3,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from array_index import PositionIndex
+
 N        = 128
 M        = N**2
 #M        = 4000
 L        = 20
-max_iter = 10000
+MAX_ITER = 10000
 
 HEALTHY  = 0
 INFECTED = 1
@@ -25,42 +27,10 @@ lifespan = np.zeros(M, dtype=int)
 # TODO: add exposed_list? - probably not needed - can just keep in infected list and check in code for type
 infected_list = -np.ones(M, dtype=int) # fill with minus ones
 
-class PositionIndex:
-
-    def __init__(self, grid_x, grid_y=1):
-        self.__grid_x = grid_x
-        self.__grid_y = grid_y
-        # creates 2 dimensional array, that can store any generic objects - a bit hacky, but works
-        self.__index = np.empty((grid_x, grid_y), dtype=object)
-       
-    def get_index(self, pos):
-        if len(pos) != 2:
-            raise ValueError("Position parameter needs to contain two values")
-
-        return self.__index[pos[0], pos[1]]
-    
-    def append_index(self, pos, actor_idx):
-        if len(pos) != 2:
-            raise ValueError("Position parameter needs to contain two values")
-
-        idxs = self.__index[pos[0], pos[1]]
-        if idxs is None:
-            idxs = [actor_idx] # TODO: try with numpy arrays?
-        else:
-            idxs.append(actor_idx)
-
-        self.__index[pos[0], pos[1]] = idxs
-
-    def remove_index(self, pos, actor_idx):
-        if len(pos) != 2:
-            raise ValueError("Position parameter needs to contain two values")
-
-        self.__index[pos[0], pos[1]].remove(actor_idx)
-
-
+class Simulation:
 index = PositionIndex(grid_x=N, grid_y=N)
 
-ts_sick  = np.zeros(max_iter, dtype=int)
+ts_sick  = np.zeros(MAX_ITER, dtype=int)
 
 for j in range(M):
     x[j] = np.random.randint(0, N)
@@ -73,7 +43,7 @@ infect[jj] = 1
 n_sick, n_dead, iterate = 1, 0, 0
 infected_list[0] = jj
 
-while (n_sick > 0) and (iterate < max_iter):
+while (n_sick > 0) and (iterate < MAX_ITER):
     new_infect = infect.copy() # TODO: optimize this bug fix
 
     for j in range(0, M): # TODO: iterate only over infected and exposed (after implementing SIRE)
