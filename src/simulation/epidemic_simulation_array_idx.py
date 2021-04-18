@@ -21,36 +21,39 @@ class Simulation:
     Y_STEP   = np.array([0, -1, 0, 1], dtype=int)
 
 
-    def __init__(self, N, M, L, max_iter, logging=False):
+    def __init__(self, N: int=None, M: int=None, L: int=None,
+                    max_iter: int=10000, logging: bool=False, csv_line: str=None):
         self.N        = N
         self.M        = M
         self.L        = L
-        self.MAX_ITER = max_iter
-        self.logging  = logging
+        if csv_line is None:
+            self.max_iter = max_iter
+            self.logging  = logging
 
-        # plot data
-        self.TS_SICK   = np.zeros(max_iter, dtype=int)
-        self.TS_DEAD   = np.zeros(max_iter, dtype=int)
-        self.LAST_ITER = 0
+            self.ts_sick   = np.zeros(max_iter, dtype=int)
+            self.ts_dead   = np.zeros(max_iter, dtype=int)
+            self.last_iter = 0
+        else:
+            str_sick, str_dead = csv_line[:-1].split(";")
+            self.ts_sick = np.array([int(value) for value in str_sick.split(",")])
+            self.ts_dead = np.array([int(value) for value in str_dead.split(",")])
+            self.last_iter = len(self.ts_sick) - 1
 
 
-    def run(self, seed):
+    def run(self, seed: int):
         # TODO: use/delete the seed param
 
         if self.N <= 0 or self.M <= 0:
             return {
-                    "LAST_ITER": self.LAST_ITER,
-                    "TS_SICK": self.TS_SICK,
-                    "TS_DEAD": self.TS_DEAD
+                    "LAST_ITER": self.last_iter,
+                    "TS_SICK": self.ts_sick,
+                    "TS_DEAD": self.ts_dead
             }
 
         x, y     = np.zeros(self.M, dtype=int), np.zeros(self.M, dtype=int)
         infect   = np.zeros(self.M, dtype=int)
         lifespan = np.zeros(self.M, dtype=int)
 
-        # my optimizations
-        # TODO: use infcted_list - after implementing SIRE
-        # TODO: add exposed_list? - probably not needed - can just keep in infected list and check in code for type
         infected_list = -np.ones(self.M, dtype=int) # fill with minus ones
         index = PositionIndex(grid_x=self.N, grid_y=self.N)
 
@@ -66,12 +69,13 @@ class Simulation:
         n_sick, n_dead, iteration = 1, 0, 0
         infected_list[0] = jj
 
-        while (n_sick > 0) and (iteration < self.MAX_ITER):
-            # TODO: UNUSED FIX???
-            new_infect = infect.copy() # TODO: optimize this bug fix
+        while (n_sick > 0) and (iteration < self.max_iter):
+            # create an empty set to keep info on newly infected actors,
+            # so we don't mutate the array we are looping over
+            new_infect = set() # TODO: try replacing with np.array
 
             for j in range(0, self.M): # TODO: iterate only over infected and exposed (after implementing SIRE)
-            
+
                 if infect[j] != self.DEAD:
                     ii = np.random.randint(4)
 
@@ -87,7 +91,7 @@ class Simulation:
                     y[j] = new_y
 
                 if infect[j] == 1:
-                
+
                     lifespan[j] -= 1
 
                     if lifespan[j] <= 0:
@@ -96,42 +100,83 @@ class Simulation:
                         n_dead += 1
                         index.remove_index((x[j], y[j]), j)
 
-                    same_position = index.get_index((x[j], y[j]))
+                    same_position = index[(x[j], y[j])]
                     for k in same_position:
                         if infect[k] == 0 and k != j:
-                            infect[k] = 1
-                            lifespan[k] = self.L
-                            n_sick += 1
+                            # keep track of newly infected in a set
+                            new_infect.add(k)
 
-            self.TS_SICK[iteration] = n_sick
-            self.TS_DEAD[iteration] = n_dead
+            # update the newly infected status
+            for idx in new_infect:
+                infect[idx] = 1
+                lifespan[idx] = self.L
+                n_sick += 1
+
+            self.ts_sick[iteration] = n_sick
+            self.ts_dead[iteration] = n_dead
             iteration += 1
             if self.logging:
                 print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
 
-        self.LAST_ITER = iteration - 1
+        self.last_iter = iteration - 1
         return {
-                "LAST_ITER": self.LAST_ITER,
-                "TS_SICK": self.TS_SICK,
-                "TS_DEAD": self.TS_DEAD
+                "LAST_ITER": self.last_iter,
+                "TS_SICK": self.ts_sick,
+                "TS_DEAD": self.ts_dead
         }
 
 
-    def show_plot(self):
-        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
+    def plot(self):
+        fig, ax = plt.subplots()
+        ax.title.set_text("Epidemic simulation")
+        ax.set_xlabel("Number of iterations")
+        ax.set_ylabel("% of infected population")
+        plt.plot(np.arange(self.last_iter), self.ts_sick[0:self.last_iter]/self.M * 100) # percent
+
+
+    def show(self):
         plt.show()
 
 
-    def save_plot(self, path):
+    def save(self, path: str):
         files = glob.glob(path + "*.png")
         num = len(files) + 1
-
-        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
-        # plt.plot(range(0, self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10])
         plt.savefig(path + str(num) + ".png")
+
+    def dump_to_csv(self, path: str):
+        with open("{}_{}-{}-{}.csv".format(path, self.N, self.M, self.L), "a") as f:
+            print(self.ts_sick[:self.last_iter])
+            print(self.ts_dead[:self.last_iter])
+
+            for idx in np.arange(self.last_iter):
+                f.write(str(self.ts_sick[idx]))
+                if idx != self.last_iter - 1:
+                    f.write(",")
+                else:
+                    f.write(";")
+
+            for idx in np.arange(self.last_iter):
+                f.write(str(self.ts_dead[idx]))
+                if idx != self.last_iter - 1:
+                    f.write(",")
+                else:
+                    f.write("\n")
 
 
 if __name__ == "__main__":
-    simulation = Simulation(N=128, M=128**2, L=20, max_iter=10000, logging=True)
-    simulation.run(123)
-    simulation.show_plot()
+    load = True
+    if load:
+        N, M, L = 128, 16384, 20
+        file = "/home/janek/code/PG/magisterka/repo/simulations/_{}-{}-{}.csv".format(N, M, L)
+
+        with open(file) as f:
+            for line in f:
+                simulation = Simulation(N=N, M=M, L=L, csv_line=line)
+                simulation.plot()
+                simulation.show()
+    else:
+        simulation = Simulation(N=128, M=128**2, L=20, max_iter=10000, logging=True)
+        simulation.run(123)
+        simulation.dump_to_csv("/home/janek/code/PG/magisterka/repo/simulations/")
+        simulation.plot()
+        simulation.show()
