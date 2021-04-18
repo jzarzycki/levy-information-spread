@@ -1,3 +1,5 @@
-get_todos.sh
+.vscode
 __pycache__
 test_figures
+simulations
+get_todos.sh
