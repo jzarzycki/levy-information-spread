@@ -1,7 +1,3 @@
-# TODO: test performance with sets vs np.arrays
-# np.array - probably overall faster becasue it's implemented in C
-# set - probably faster deletion by value: O(1) vs O(n) operation
-
 import numpy as np
 
 
@@ -14,7 +10,6 @@ class PositionIndex:
         self.__index = np.empty((grid_x, grid_y), dtype=object)
         for i in np.arange(grid_x):
             for j in np.arange(grid_y):
-                # TODO: try using np.array
                 self.__index[i, j] = set()
 
     def __getitem__(self, pos: tuple) -> set:
@@ -27,20 +22,3 @@ class PositionIndex:
 
     def remove_index(self, pos: tuple, actor_idx: int):
         self[pos].remove(actor_idx)
-
-
-class ActorIndex:
-
-    def __init(self, M: int):
-        # TODO: try using np.array
-        self.__index = set()
-
-    def __iter__(self):
-        for idx in self.__index:
-            yield idx
-
-    def add(self, idx: int):
-        self.__index.add(idx)
-
-    def remove(self, idx: int):
-        self.__index.remove(idx)

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# TODO: add reading simulation data from csv (mock class?)
-
 # %%
 import glob
 from multiprocessing import Pool, cpu_count
