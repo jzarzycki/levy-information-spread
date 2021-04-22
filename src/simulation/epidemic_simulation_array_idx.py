@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 
 import glob
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    from index import PositionIndex
-else:
-    from simulation.index import PositionIndex
+    # a hack, that fixes imports, when run as a script
+    import sys
+    sys.path.append(r"/home/janek/code/PG/magisterka/repo/src")
+from simulation.index import PositionIndex
+from distribution.levy import Levy
 
 
 class Simulation:
@@ -17,15 +20,16 @@ class Simulation:
     INFECTED = 1
     DEAD     = 2
 
-    X_STEP   = np.array([-1, 0, 1, 0], dtype=int)
-    Y_STEP   = np.array([0, -1, 0, 1], dtype=int)
 
-
-    def __init__(self, N: int=None, M: int=None, L: int=None,
+    def __init__(self, N: int=None, M: int=None, L: int=None, max_random_step: int=10,
                     max_iter: int=10000, logging: bool=False, csv_line: str=None):
-        self.N        = N
-        self.M        = M
-        self.L        = L
+        self.N = N
+        self.M = M
+        self.L = L
+
+        #self.max_random_step = max_random_step # TODO: wywalić to?
+        self.levy = Levy(max_random_step)
+
         if csv_line is None:
             self.max_iter = max_iter
             self.logging  = logging
@@ -44,11 +48,7 @@ class Simulation:
         # TODO: use/delete the seed param
 
         if self.N <= 0 or self.M <= 0:
-            return {
-                    "LAST_ITER": self.last_iter,
-                    "TS_SICK": self.ts_sick,
-                    "TS_DEAD": self.ts_dead
-            }
+            return self
 
         x, y     = np.zeros(self.M, dtype=int), np.zeros(self.M, dtype=int)
         infect   = np.zeros(self.M, dtype=int)
@@ -72,17 +72,17 @@ class Simulation:
         while (n_sick > 0) and (iteration < self.max_iter):
             # create an empty set to keep info on newly infected actors,
             # so we don't mutate the array we are looping over
-            new_infect = set() # TODO: try replacing with np.array
+            # TODO: replace with another infected index?
+            new_infect = set() # TODO: try replacing with np.array?
 
             for j in range(0, self.M): # TODO: iterate only over infected and exposed (after implementing SIRE)
 
                 if infect[j] != self.DEAD:
-                    ii = np.random.randint(4)
+                    new_x = x[j] + self.levy.random_step()
+                    new_y = y[j] + self.levy.random_step()
 
-                    new_x = x[j] + self.X_STEP[ii]
-                    new_y = y[j] + self.Y_STEP[ii]
-                    new_x = min(self.N - 1, max(new_x, 1))
-                    new_y = min(self.N - 1, max(new_y, 1))
+                    new_x %= self.N
+                    new_y %= self.N
 
                     index.remove_index((x[j], y[j]), j)
                     index.append_index((new_x, new_y), j)
@@ -119,11 +119,7 @@ class Simulation:
                 print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
 
         self.last_iter = iteration - 1
-        return {
-                "LAST_ITER": self.last_iter,
-                "TS_SICK": self.ts_sick,
-                "TS_DEAD": self.ts_dead
-        }
+        return self
 
 
     def plot(self):
@@ -143,10 +139,9 @@ class Simulation:
         num = len(files) + 1
         plt.savefig(path + str(num) + ".png")
 
+
     def dump_to_csv(self, path: str):
-        with open("{}_{}-{}-{}.csv".format(path, self.N, self.M, self.L), "a") as f:
-            print(self.ts_sick[:self.last_iter])
-            print(self.ts_dead[:self.last_iter])
+        with open("{}/{}N-{}M-{}L.csv".format(path, self.N, self.M, self.L), "a") as f:
 
             for idx in np.arange(self.last_iter):
                 f.write(str(self.ts_sick[idx]))
@@ -164,8 +159,7 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    load = True
-    if load:
+    if "--load" in sys.argv[1:]:
         N, M, L = 128, 16384, 20
         file = "/home/janek/code/PG/magisterka/repo/simulations/_{}-{}-{}.csv".format(N, M, L)
 

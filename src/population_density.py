@@ -9,7 +9,7 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 import matplotlib.pyplot as plt
 
-import simulation.epidemic_simulation_array_idx as ep_simulation
+from simulation.epidemic_simulation_array_idx import Simulation
 
 # %%
 # Population density graph config
@@ -63,6 +63,7 @@ class Plot:
         ax.set_xlabel("Pop. density")
         ax.set_ylabel(self.title)
 
+        # TODO: fix dot width
         ax.plot(self.percents, self.ts_avg, color="black", marker="o", linestyle="none")
         ax.vlines(self.percents, ymin=self.ts_avg - self.ts_std/2, ymax=self.ts_avg + self.ts_std/2, colors="black")
 
@@ -90,6 +91,7 @@ class Plot:
 
 # %%
 if __name__ == "__main__":
+    # TODO: move widths generation to plot class
     # build range with varying step size
     ranges = []
     widths = []
@@ -99,7 +101,7 @@ if __name__ == "__main__":
         ranges.append(_range)
         widths += [step] * len(_range)
         br_last = br_i
-    # tutaj wygeneruj fix do plt.bar z ranges
+
     if ranges[-1][-1] != BREAKPOINTS[-1]:
         widths.append(BREAKPOINTS[-1] - ranges[-1][-1])
         ranges.append([BREAKPOINTS[-1]])
@@ -119,26 +121,46 @@ if __name__ == "__main__":
 
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)
+        #dead_per_step = np.zeros(ITER_PER_STEP)
 
-        sim = ep_simulation.Simulation(N=N, M=M, L=L, max_iter=MAX_ITER)
-        dead_per_step = np.zeros(ITER_PER_STEP)
+        # load simulations from csv
+        file_path = "/home/janek/code/PG/magisterka/repo/simulations/"
+        name_format = "{}N-{}M-{}L.csv".format(N, M, L)
+        num_saved = 0
+        try:
+            with open(file_path + name_format) as sim_file:
+                for sim_line in sim_file:
+                    sim_i = Simulation(N=N, M=M, L=L, csv_line=sim_line)
 
-        threads = cpu_count()
-        with Pool(threads) as pool:
-            seeds = np.full(ITER_PER_STEP, SEED)
-            num = 0
-            print(current_progress.format(iteration+1, num_steps, percent * 100, num, ITER_PER_STEP), end="")
-            for result in pool.imap_unordered(sim.run, seeds):
-                last_iter = result["LAST_ITER"]
-                #ts_sick   = result["TS_SICK"]
-                ts_dead   = result["TS_DEAD"]
+                    death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
+                    num_iter.add_result(sim_i.last_iter)
 
-                death_rate.add_result(ts_dead[last_iter] / M if M != 0 else 0)
-                num_iter.add_result(last_iter)
+                    num_saved += 1
+                    if num_saved == ITER_PER_STEP:
+                        break
+        except FileNotFoundError:
+            pass
 
-                num += 1
-                print(current_progress.format(iteration+1, num_steps, percent * 100, num, ITER_PER_STEP), end="")
-            print()
+        # run the remaining simulations
+        if ITER_PER_STEP > num_saved:
+            sim = Simulation(N=N, M=M, L=L, max_iter=MAX_ITER)
+            threads = cpu_count()
+            with Pool(threads) as pool:
+                seeds = np.full(ITER_PER_STEP - num_saved, SEED)
+                print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
+                for sim_i in pool.imap_unordered(sim.run, seeds):
+                    last_iter = sim_i.last_iter
+                    #ts_sick   = sim_i.ts_sick
+                    ts_dead   = sim_i.ts_dead
+
+                    death_rate.add_result(ts_dead[last_iter] / M if M != 0 else 0)
+                    num_iter.add_result(last_iter)
+
+                    sim_i.dump_to_csv(file_path)
+
+                    num_saved += 1
+                    print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
+        print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP))
 
     path = "/home/janek/code/PG/magisterka/repo/test_figures/density-"
     death_rate.plot(widths)
