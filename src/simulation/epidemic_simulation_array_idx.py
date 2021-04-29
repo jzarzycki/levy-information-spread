@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import glob
+from pathlib import Path
 import sys
 
 import numpy as np
@@ -14,6 +14,7 @@ from simulation.index import PositionIndex
 from distribution.levy import Levy
 
 
+# TODO: make this Simulation class, then inherit from it with SimA and SimB classes
 class SimulationA:
 
     SUSCEPTIBLE = 0
@@ -21,7 +22,7 @@ class SimulationA:
     RECOVERED   = 2
 
 
-    def __init__(self, N: int=None, M: int=None, max_random_step: int=10,
+    def __init__(self, N: int=None, M: int=None, max_random_step: int=10, # TODO: play with this value
                     max_iter: int=10000, logging: bool=False, csv_line: str=None):
         self.N = N
         self.M = M
@@ -42,7 +43,7 @@ class SimulationA:
             self.last_iter = len(self.ts_sick) - 1
 
 
-    def handle_two_infected_meet(self) -> tuple:
+    def handle_two_infected_meet(self) -> tuple[int, int]:
         return self.RECOVERED, self.RECOVERED
 
 
@@ -77,19 +78,22 @@ class SimulationA:
                 if infect[j] == self.INFECTED:
                     # move
                     position_index.remove_index((x[j], y[j]), j)
-                    new_x = x[j] + self.random_walk.random_step()
-                    new_y = y[j] + self.random_walk.random_step()
-                    x[j] = new_x % self.N
-                    y[j] = new_y % self.N
+                    new_x = (x[j] + self.random_walk.random_step()) % self.N
+                    new_y = (y[j] + self.random_walk.random_step()) % self.N
+                    x[j] = new_x
+                    y[j] = new_y
                     position_index.append_index((new_x, new_y), j)
 
                     # save which walkers changed status
                     same_position = position_index[(x[j], y[j])]
                     for k in same_position:
+                        # if an infected person meets a susceptible person, infect them
                         if infect[k] == self.SUSCEPTIBLE and j != k:
                             new_infected.add(k)
+                        # if an infected person meets a recovered person, they both become recovered
                         elif infect[k] == self.RECOVERED and j != k:
                             new_recovered.add(j)
+                        # if two infected people meet both/one of them become recovered (depends on model)
                         elif infect[k] == self.INFECTED and j != k:
                             status1, status2 = self.handle_two_infected_meet()
 
@@ -110,7 +114,7 @@ class SimulationA:
                 infect[idx] = self.RECOVERED
                 n_sick -= 1
                 n_dead += 1
-                position_index.remove_index((x[idx], y[idx]), idx)
+                infected_index.remove(idx)
             new_recovered.clear()
 
             # plot data
@@ -119,6 +123,7 @@ class SimulationA:
             iteration += 1
 
             if self.logging:
+                # TODO: add argparse option to select between these?
                 print(f"I:{iteration}, healthy: {self.M - n_sick - n_dead}, sick:{n_sick}, dead:{n_dead}")
                 #print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
 
@@ -127,10 +132,10 @@ class SimulationA:
 
 
     def plot(self):
-        fig, ax = plt.subplots()
-        ax.title.set_text("Epidemic simulation")
-        ax.set_xlabel("Number of iterations")
-        ax.set_ylabel("% of infected population")
+        plt.figure()
+        plt.title("Epidemic simulation")
+        plt.xlabel("Number of iterations")
+        plt.ylabel("% of infected population")
         plt.plot(np.arange(self.last_iter), self.ts_sick[0:self.last_iter]/self.M * 100) # percent
 
 
@@ -138,14 +143,16 @@ class SimulationA:
         plt.show()
 
 
-    def save(self, path: str):
-        files = glob.glob(path + "*.png")
-        num = len(files) + 1
-        plt.savefig(path + str(num) + ".png")
+    def save(self, path: Path, filename: str):
+        files = Path().glob(filename + "*.png")
+        num = len(list(files)) + 1
+        file_path = path.joinpath(filename+ str(num) + ".png")
+        plt.savefig(file_path)
 
 
-    def dump_to_csv(self, path: str):
-        with open("{}/{}N-{}M.csv".format(path, self.N, self.M), "a") as f:
+    def dump_to_csv(self, path: Path):
+        file_path = path.joinpath("{}N-{}M.csv".format(self.N, self.M))
+        with file_path.open(mode="a") as f:
 
             for idx in np.arange(self.last_iter):
                 f.write(str(self.ts_sick[idx]))
@@ -168,20 +175,24 @@ class SimulationB(SimulationA):
         return self.INFECTED, self.RECOVERED
 
 
-if __name__ == "__main__":
-    directory = "/home/janek/code/PG/magisterka/repo/simulations/"
+def main():
+    directory = Path("/home/janek/code/PG/magisterka/repo/simulations/")
 
     N = 128
     M = N ** 2
 
     if "--load" in sys.argv[1:]:
-        file = "_{}-{}.csv".format(N, M)
+        # TODO: let Simulation do this pattern matching
+        file_name = "{}N-{}M.csv".format(N, M)
 
-        with open(directory + file) as f:
-            for line in f:
-                simulation = SimulationA(N=N, M=M, csv_line=line)
-                simulation.plot()
-                simulation.show()
+        try:
+            with directory.joinpath(file_name).open() as f:
+                for line in f:
+                    simulation = SimulationA(N=N, M=M, csv_line=line)
+                    simulation.plot()
+                    simulation.show()
+        except FileNotFoundError:
+            print("There aren't any simulations of this kind yet.")
     else:
 
         simulation = SimulationA(N=N, M=M, max_iter=10000, logging=True)
@@ -190,3 +201,7 @@ if __name__ == "__main__":
 
         simulation.plot()
         simulation.show()
+
+
+if __name__ == "__main__":
+    main()

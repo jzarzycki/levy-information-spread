@@ -1,49 +1,38 @@
 #!/usr/bin/env python3
 
 # %%
-import glob
+from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulation.epidemic_simulation_array_idx import Simulation
+from simulation.epidemic_simulation_array_idx import SimulationA
 
-# %%
-# Population density graph config
-LOW_LIMIT     = 0
-BREAKPOINTS   = [0.1,  0.2,   0.23, 0.27,   0.3,  0.4,   0.6]
-STEP          = [0.05, 0.025, 0.01, 0.0025, 0.01, 0.025, 0.05]
-#BREAKPOINTS   = [0.2, 0.3, 0.4]
-#STEP          = [0.1, 0.05, 0.1]
-HIGH_LIMIT    = max(BREAKPOINTS)
-ITER_PER_STEP = 20
-
-N        = 128
-L        = 20
-MAX_ITER = 10000
-SEED = 123 # what should I do with this?
 
 # %%
 class Plot:
 
-    def __init__(self, percents: list, title: str):
-        self.sim_idx = 0
-        self.num_per_step = np.zeros(ITER_PER_STEP)
-        self.percents = percents
-        self.title = title
+    # remove percents and generate them here
+    def __init__(self, percents: list, steps: list[int], iter_per_step: int, title: str):
+        self.percents     = percents
+        self.steps        = steps
+        self.iter_per_step= iter_per_step
+        self.title        = title
 
+        self.sim_idx      = 0
         self.current_step = 0
-        num_steps = len(percents)
-        self.ts_avg = np.zeros(num_steps)
-        self.ts_min = np.zeros(num_steps)
-        self.ts_max = np.zeros(num_steps)
-        self.ts_std = np.zeros(num_steps)
+        num_steps         = len(percents)
+        self.num_per_step = np.zeros(iter_per_step)
+        self.ts_avg       = np.zeros(num_steps)
+        self.ts_min       = np.zeros(num_steps)
+        self.ts_max       = np.zeros(num_steps)
+        self.ts_std       = np.zeros(num_steps)
 
     def add_result(self, num: int):
         self.num_per_step[self.sim_idx] = num
         self.sim_idx += 1
-        if self.sim_idx >= ITER_PER_STEP:
+        if self.sim_idx >= self.iter_per_step:
             self._next_step()
 
     def _next_step(self):
@@ -55,57 +44,51 @@ class Plot:
         self.sim_idx = 0
         self.current_step += 1
 
-    def plot(self, widths: list=None):
+    def plot(self):
         plt.figure()
-        fig, ax = plt.subplots()
-        ax.set_xlabel("Pop. density")
-        ax.set_ylabel(self.title)
+        plt.xlabel("Pop. density")
+        plt.ylabel(self.title)
 
-        # TODO: fix dot width
-        ax.plot(self.percents, self.ts_avg, color="black", marker="o", linestyle="none")
-        ax.vlines(self.percents, ymin=self.ts_avg - self.ts_std/2, ymax=self.ts_avg + self.ts_std/2, colors="black")
+        plt.plot(self.percents, self.ts_avg, color="black", marker="o", linestyle="none")
+        plt.vlines(self.percents, ymin=self.ts_avg - self.ts_std/2, ymax=self.ts_avg + self.ts_std/2, colors="black")
 
-        args = {
-            "x": self.percents,
-            "height": self.ts_max - self.ts_min,
-            "bottom": self.ts_min,
-            "color": "lightgrey"
-        }
-        if widths is not None:
-            widths = np.array(widths)
-            left_width = -widths[:-1] / 2
-            right_width = widths[1:] / 2
+        plt.bar(x=self.percents, height=self.ts_max-self.ts_min, bottom=self.ts_min, color="lightgrey", width=min(self.steps))
 
-            ax.bar(**args, width=left_width, align="edge")
-            ax.bar(**args, width=right_width, align="edge")
-        else:
-            ax.bar(**args, width=min(STEP))
-
-    def save(self, path: str):
-        files = glob.glob(path + "*.png")
-        num = len(files) + 1
-        plt.savefig(path + str(num) + ".png")
+    def save(self, path: Path, filename: str):
+        files = Path(path).glob(filename + "*.png")
+        num = len(list(files)) + 1
+        file_path = path.joinpath(filename+ str(num) + ".png")
+        plt.savefig(file_path)
 
 
 # %%
-if __name__ == "__main__":
-    # TODO: move widths generation to plot class
+def main():
+    # population density graph config
+    # TODO: get from argparse?
+    SEED          = 123 # TODO: what should I do with this?
+    N             = 128
+    MAX_ITER      = 10000
+    BREAKPOINTS   = [0.0, 0.01, 0.02, 0.1, 0.6]
+    STEPS         = [0.0002, 0.001, 0.005, 0.05]
+    LOW_LIMIT     = BREAKPOINTS[0]
+    HIGH_LIMIT    = BREAKPOINTS[-1]
+    ITER_PER_STEP = 400
+
     # build range with varying step size
     ranges = []
-    widths = []
     br_last = LOW_LIMIT
-    for br_i, step in zip(BREAKPOINTS, STEP):
+
+    for br_i, step in zip(BREAKPOINTS[1:], STEPS):
         _range = np.arange(br_last, br_i, step)
         ranges.append(_range)
-        widths += [step] * len(_range)
         br_last = br_i
 
-    if ranges[-1][-1] != BREAKPOINTS[-1]:
-        widths.append(BREAKPOINTS[-1] - ranges[-1][-1])
-        ranges.append([BREAKPOINTS[-1]])
-    percents = np.concatenate(ranges)
-    widths = [widths[0], *widths] # move this to the class
+    if ranges[-1][-1] != HIGH_LIMIT:
+        ranges.append([HIGH_LIMIT])
 
+    percents = np.concatenate(ranges)
+
+    # building string for logging
     num_steps = len(percents)
     number_of_digits = lambda number: len(str(number))
     current_progress = "\r| {:>" + str(number_of_digits(num_steps)) + "}/" +\
@@ -114,21 +97,23 @@ if __name__ == "__main__":
         "{:>" + str(number_of_digits(ITER_PER_STEP)) + "}/" +\
         "{:>" + str(number_of_digits(ITER_PER_STEP)) + "} |"
 
-    death_rate = Plot(percents, title="Average death rate")
-    num_iter   = Plot(percents, title="Average duration")
+    # run simulations
+    death_rate = Plot(percents, steps=STEPS, iter_per_step=ITER_PER_STEP, title="Average death rate")
+    num_iter   = Plot(percents, steps=STEPS, iter_per_step=ITER_PER_STEP, title="Average duration")
 
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)
         #dead_per_step = np.zeros(ITER_PER_STEP)
 
         # load simulations from csv
-        file_path = "/home/janek/code/PG/magisterka/repo/simulations/"
-        name_format = "{}N-{}M-{}L.csv".format(N, M, L)
+        # TODO: Move this pattern matching to Simulation class
+        file_path = Path("/home/janek/code/PG/magisterka/repo/simulations/")
+        name_format = "{}N-{}M.csv".format(N, M)
         num_saved = 0
         try:
-            with open(file_path + name_format) as sim_file:
+            with Path(file_path).joinpath(name_format).open() as sim_file:
                 for sim_line in sim_file:
-                    sim_i = Simulation(N=N, M=M, L=L, csv_line=sim_line)
+                    sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
 
                     death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
                     num_iter.add_result(sim_i.last_iter)
@@ -141,7 +126,7 @@ if __name__ == "__main__":
 
         # run the remaining simulations
         if ITER_PER_STEP > num_saved:
-            sim = Simulation(N=N, M=M, L=L, max_iter=MAX_ITER)
+            sim = SimulationA(N=N, M=M, max_iter=MAX_ITER)
             threads = cpu_count()
             with Pool(threads) as pool:
                 seeds = np.full(ITER_PER_STEP - num_saved, SEED)
@@ -160,9 +145,14 @@ if __name__ == "__main__":
                     print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
         print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP))
 
-    path = "/home/janek/code/PG/magisterka/repo/test_figures/density-"
-    death_rate.plot(widths)
-    death_rate.save(path + "death-")
+    path = Path("/home/janek/code/PG/magisterka/repo/test_figures/")
+    death_rate.plot()
+    death_rate.save(path, "density-death-")
 
-    num_iter.plot(widths)
-    num_iter.save(path + "iter-")
+    num_iter.plot()
+    num_iter.save(path, "density-iter-")
+
+
+# %%
+if __name__ == "__main__":
+    main()
