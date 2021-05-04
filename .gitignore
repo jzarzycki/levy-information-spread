@@ -1,6 +1,8 @@
-.vscode
+.vscode/
 venv/*
-__pycache__
-test_figures
-simulations
+__pycache__/
+test_figures/
+plots/
+simulations/
+sim_results/
 get_todos.sh
