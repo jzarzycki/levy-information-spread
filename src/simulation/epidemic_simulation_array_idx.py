@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Information spread model using Lévy Flight random walks.
+"""
+
 from pathlib import Path
 import sys
 
