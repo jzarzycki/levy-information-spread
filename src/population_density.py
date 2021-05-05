@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for running simulations for multiple values of population density and plotting their results.
+"""
+
 # %%
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
