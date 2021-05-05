@@ -6,10 +6,12 @@ Information spread model using Lévy Flight random walks.
 
 from pathlib import Path
 import sys
+from abc import ABC, abstractmethod
 
 import numpy as np
 import matplotlib.pyplot as plt
 
+# TODO: flatten repo and delete this!
 if __name__ == '__main__':
     # a hack, that fixes imports, when run as a script
     import sys
@@ -18,8 +20,7 @@ from simulation.index import PositionIndex
 from distribution.levy import Levy
 
 
-# TODO: make this Simulation class, then inherit from it with SimA and SimB classes
-class SimulationA:
+class Simulation(ABC):
 
     SUSCEPTIBLE = 0
     INFECTED    = 1
@@ -47,8 +48,9 @@ class SimulationA:
             self.last_iter = len(self.ts_sick) - 1
 
 
-    def handle_two_infected_meet(self) -> tuple[int, int]:
-        return self.RECOVERED, self.RECOVERED
+    @abstractmethod
+    def handle_two_infected_meet(self) -> tuple:
+        pass
 
 
     def run(self, seed: int):
@@ -173,15 +175,19 @@ class SimulationA:
                     f.write("\n")
 
 
-class SimulationB(SimulationA):
+class SimulationA(Simulation):
 
-    def handle_two_infected_meet(self):
+    def handle_two_infected_meet(self) -> tuple:
+        return self.RECOVERED, self.RECOVERED
+
+
+class SimulationB(Simulation):
+
+    def handle_two_infected_meet(self) -> tuple:
         return self.INFECTED, self.RECOVERED
-
 
 def main():
     directory = Path("/home/janek/code/PG/magisterka/repo/simulations/")
-
     N = 128
     M = N ** 2
 
