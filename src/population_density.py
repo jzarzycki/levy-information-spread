@@ -18,7 +18,7 @@ from simulation.epidemic_simulation_array_idx import SimulationA
 class Plot:
 
     # remove percents and generate them here
-    def __init__(self, percents: list, steps: list[int], iter_per_step: int, title: str):
+    def __init__(self, percents: list, steps: list, iter_per_step: int, title: str):
         self.percents     = percents
         self.steps        = steps
         self.iter_per_step= iter_per_step
@@ -111,7 +111,7 @@ def main():
 
         # load simulations from csv
         # TODO: Move this pattern matching to Simulation class
-        file_path = Path("/home/janek/code/PG/magisterka/repo/simulations/")
+        file_path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\sim_results")
         name_format = "{}N-{}M.csv".format(N, M)
         num_saved = 0
         try:
@@ -149,7 +149,7 @@ def main():
                     print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
         print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP))
 
-    path = Path("/home/janek/code/PG/magisterka/repo/test_figures/")
+    path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\plots")
     death_rate.plot()
     death_rate.save(path, "density-death-")
 

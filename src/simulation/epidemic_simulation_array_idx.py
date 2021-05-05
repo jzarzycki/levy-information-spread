@@ -15,7 +15,9 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
     # a hack, that fixes imports, when run as a script
     import sys
-    sys.path.append(r"/home/janek/code/PG/magisterka/repo/src")
+    #sys.path.append(r"/home/janek/code/PG/magisterka/repo/src")
+    sys.path.append(r"C:\\Users\\janek\\Desktop\\PG\\levy-information-spread/src")
+
 from simulation.index import PositionIndex
 from distribution.levy import Levy
 
