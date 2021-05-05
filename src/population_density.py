@@ -17,7 +17,6 @@ from simulation.epidemic_simulation_array_idx import SimulationA
 # %%
 class Plot:
 
-    # remove percents and generate them here
     def __init__(self, percents: list, steps: list, iter_per_step: int, title: str):
         self.percents     = percents
         self.steps        = steps
