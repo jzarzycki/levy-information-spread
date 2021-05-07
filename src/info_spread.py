@@ -5,21 +5,18 @@ Information spread model using Lévy Flight random walks.
 """
 
 from pathlib import Path
-import sys
 from abc import ABC, abstractmethod
+from argparse import ArgumentParser, ArgumentError
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-# TODO: flatten repo and delete this!
-if __name__ == '__main__':
-    # a hack, that fixes imports, when run as a script
-    import sys
-    #sys.path.append(r"/home/janek/code/PG/magisterka/repo/src")
-    sys.path.append(r"C:\\Users\\janek\\Desktop\\PG\\levy-information-spread/src")
-
-from simulation.index import PositionIndex
-from distribution.levy import Levy
+if __name__ == "__main__":
+    from index import PositionIndex
+    from random_walks import Levy
+else:
+    from src.index import PositionIndex
+    from src.random_walks import Levy
 
 
 class Simulation(ABC):
@@ -29,7 +26,7 @@ class Simulation(ABC):
     RECOVERED   = 2
 
 
-    def __init__(self, N: int=None, M: int=None, max_random_step: int=10, # TODO: play with this value
+    def __init__(self, N: int=None, M: int=None, max_random_step: int=10,
                     max_iter: int=10000, logging: bool=False, csv_line: str=None):
         self.N = N
         self.M = M
@@ -141,9 +138,9 @@ class Simulation(ABC):
 
     def plot(self):
         plt.figure()
-        plt.title("Epidemic simulation")
+        plt.title("Information spread simulation")
         plt.xlabel("Number of iterations")
-        plt.ylabel("% of infected population")
+        plt.ylabel("% of affected population")
         plt.plot(np.arange(self.last_iter), self.ts_sick[0:self.last_iter]/self.M * 100) # percent
 
 
@@ -188,12 +185,38 @@ class SimulationB(Simulation):
     def handle_two_infected_meet(self) -> tuple:
         return self.INFECTED, self.RECOVERED
 
-def main():
-    directory = Path("/home/janek/code/PG/magisterka/repo/simulations/")
-    N = 128
-    M = N ** 2
 
-    if "--load" in sys.argv[1:]:
+def parse_arguments():
+    parser = ArgumentParser(description=__doc__)
+
+    parser.add_argument("--csv_dir", default=None, help="path to directory, where results should be kept")
+    parser.add_argument("--N", type=int, nargs="?", default=128, help="grid size in x and y axes (defaults to 128)")
+    parser.add_argument("--ro", type=float, nargs="?", default=0.1, help="population size (defaults to 0.1)")
+    parser.add_argument("--load", action="store_const", const=True, default=False, help="if present, script will load previous simulations results instead of running new ones")
+
+    args = parser.parse_args()
+
+    if args.csv_dir is not None:
+        directory = Path(args.csv_dir).resolve()
+        if not directory.is_dir():
+            raise NotADirectoryError("{} is not a directory".format((directory)))
+    elif args.load:
+        raise ArgumentError("Supply a directory with csv results with the --csv_dir flag")
+
+    if args.ro < 0:
+        raise ValueError("Population density can't be lower than zero")
+
+    return args
+
+
+def main():
+    args = parse_arguments()
+
+    directory = Path(args.csv_dir).resolve()
+    N = args.N
+    M = int(args.ro * N**2)
+
+    if args.load:
         # TODO: let Simulation do this pattern matching
         file_name = "{}N-{}M.csv".format(N, M)
 
@@ -205,11 +228,13 @@ def main():
                     simulation.show()
         except FileNotFoundError:
             print("There aren't any simulations of this kind yet.")
-    else:
 
-        simulation = SimulationA(N=N, M=M, max_iter=10000, logging=True)
+    else:
+        simulation = SimulationA(N=N, M=M, max_random_step=10, max_iter=10000, logging=True)
         simulation.run(123)
-        simulation.dump_to_csv(directory)
+
+        if args.csv_dir is not None:
+            simulation.dump_to_csv(directory)
 
         simulation.plot()
         simulation.show()

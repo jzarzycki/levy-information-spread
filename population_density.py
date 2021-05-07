@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# TODO: better plot points
+# TODO: check if file was written to correctly, and delete a line if it wasn't, or just ignore it and log a message when reading?
+
 """
 Module for running simulations for multiple values of population density and plotting their results.
 """
@@ -7,11 +10,12 @@ Module for running simulations for multiple values of population density and plo
 # %%
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
+#from argparse import ArgumentParser
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from simulation.epidemic_simulation_array_idx import SimulationA
+from src.info_spread import SimulationA, SimulationB
 
 
 # %%
@@ -36,9 +40,9 @@ class Plot:
         self.num_per_step[self.sim_idx] = num
         self.sim_idx += 1
         if self.sim_idx >= self.iter_per_step:
-            self._next_step()
+            self.__next_step()
 
-    def _next_step(self):
+    def __next_step(self):
         self.ts_avg[self.current_step] = np.average(self.num_per_step)
         self.ts_min[self.current_step] = np.min(self.num_per_step)
         self.ts_max[self.current_step] = np.max(self.num_per_step)
