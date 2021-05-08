@@ -210,7 +210,8 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
-    directory = Path(args.csv_dir).resolve()
+    if args.csv_dir is not None:
+        directory = Path(args.csv_dir).resolve()
     N = args.N
     M = int(args.ro * N**2)
 
