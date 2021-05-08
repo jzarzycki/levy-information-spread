@@ -53,7 +53,8 @@ class Simulation(ABC):
 
 
     def run(self, seed: int):
-        # TODO: use the seed param to seed rng
+        if seed is not None:
+            np.random.seed(seed)
 
         if self.N <= 0 or self.M <= 0:
             return self
