@@ -19,7 +19,7 @@ from argparse import ArgumentParser
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.info_spread import SimulationA, SimulationB
+from src.info_spread import Simulation, SimulationA, SimulationB
 
 
 # %%
@@ -128,7 +128,7 @@ def main():
     print(args) # TODO: delete this
 
     N             = args.N
-    max_jump      = args.max_jump
+    L             = args.max_jump
 
     BREAKPOINTS   = args.breakpoints
     STEPS         = args.step_sizes
@@ -177,11 +177,12 @@ def main():
 
         # load simulations from csv
         num_saved = 0
-        file_path = Path(csv_dir).resolve()
+        directory = Path(csv_dir).resolve()
         if csv_dir is not None and not no_load:
-            name_format = "{}N-{}M.csv".format(N, M) # TODO: Move this pattern matching to Simulation class
+            #name_format = "{}N-{}M.csv".format(N, M) # TODO: Move this pattern matching to Simulation class
+            csv_path = Simulation.make_file_path(directory, N, M, L)
             try:
-                with file_path.joinpath(name_format).open() as sim_file:
+                with csv_path.open() as sim_file:
                     for sim_line in sim_file:
                         sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
 
@@ -210,7 +211,7 @@ def main():
                     num_iter.add_result(last_iter)
 
                     if csv_dir is not None:
-                        sim_i.dump_to_csv(file_path)
+                        sim_i.dump_to_csv(directory)
 
                     num_saved += 1
                     print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")

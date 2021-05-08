@@ -31,6 +31,7 @@ class Simulation(ABC):
         self.N = N
         self.M = M
 
+        self.max_random_step = max_random_step
         self.random_walk = Levy(max_random_step)
 
         if csv_line is None:
@@ -153,9 +154,14 @@ class Simulation(ABC):
         file_path = path.joinpath(filename+ str(num) + ".png")
         plt.savefig(file_path)
 
+    
+    @staticmethod
+    def make_file_path(directory, N, M, max_step):
+        return Path(directory).joinpath("{}N-{}M-{}L.csv".format(N, M, max_step))
 
-    def dump_to_csv(self, path: Path):
-        file_path = path.joinpath("{}N-{}M.csv".format(self.N, self.M))
+
+    def dump_to_csv(self, directory: Path):
+        file_path = self.make_file_path(directory, self.N, self.M, self.max_random_step)
         with file_path.open(mode="a") as f:
 
             for idx in np.arange(self.last_iter):
@@ -191,6 +197,7 @@ def parse_arguments():
     parser.add_argument("--csv-dir", default=None, help="path to directory, where simulation results are to be kept")
     parser.add_argument("--N", type=int, nargs="?", default=128, help="grid size in x and y axes (defaults to 128)")
     parser.add_argument("--ro", type=float, nargs="?", default=0.1, help="population size (defaults to 0.1)")
+    parser.add_argument("--max-random-step", type=int, default=10, help="maximum step size, that an actor can make")
     parser.add_argument("--load", action="store_const", const=True, default=False, help="if present, script will load previous simulations results instead of running new ones")
 
     args = parser.parse_args()
@@ -204,6 +211,8 @@ def parse_arguments():
 
     if args.ro < 0:
         raise ValueError("Population density can't be lower than zero")
+    if args.max_random_step < 1:
+        raise ValueError("Max step size can't be lower than one")
 
     return args
 
@@ -215,10 +224,10 @@ def main():
         directory = Path(args.csv_dir).resolve()
     N = args.N
     M = int(args.ro * N**2)
+    L = args.max_random_step
 
     if args.load:
-        # TODO: let Simulation do filename pattern matching
-        file_name = "{}N-{}M.csv".format(N, M)
+        file_name = self.make_file_path(directory, N, M, self.max_random_step)
 
         try:
             with directory.joinpath(file_name).open() as f:
@@ -230,7 +239,7 @@ def main():
             print("There aren't any simulations of this kind yet.")
 
     else:
-        simulation = SimulationA(N=N, M=M, max_random_step=10, max_iter=10000, logging=True)
+        simulation = SimulationA(N=N, M=M, max_random_step=L, max_iter=10000, logging=True)
         simulation.run(123)
 
         if args.csv_dir is not None:
