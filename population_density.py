@@ -71,6 +71,9 @@ class Plot:
         file_path = path.joinpath(filename+ str(num) + ".png")
         plt.savefig(file_path)
 
+    def show(self):
+        plt.show()
+
 
 def parse_arguments():
     parser = ArgumentParser(description=__doc__)
@@ -78,8 +81,8 @@ def parse_arguments():
     parser.add_argument("--csv-dir", default=None, help="path to directory, where simulation results are to be kept")
     parser.add_argument("--plot-dir", default=None, help="path to directory, where plots should be saved")
 
-    parser.add_argument("--breakpoints", type=float, nargs="+", help="points of the plot, where step sizes change")
-    parser.add_argument("--step-sizes", type=float, nargs="+", help="size of the steps between consecutive breakpoints, needs to have one less value than breakpoints")
+    parser.add_argument("--breakpoints", type=float, default=[], nargs="+", help="points of the plot, where step sizes change")
+    parser.add_argument("--step-sizes", type=float, default=[], nargs="+", help="size of the steps between consecutive breakpoints, needs to have one less value than breakpoints")
     parser.add_argument("--max-iter", type=int, default=10000, help="maximum amount of iterations that a simulation can take, before it gets terminated (defaults to 10 000)")
     parser.add_argument("--iter-per-step", type=int, default=100, help="number of iterations (defaults to 100)")
     parser.add_argument("--seed", type=int, default=None, help="integer used to seed the random number generator")
@@ -87,7 +90,6 @@ def parse_arguments():
     parser.add_argument("--N", type=int, default=128, help="grid size in x and y axes (defaults to 128)")
     parser.add_argument("--max-jump", type=int, default=10, help="maximum jump that a walker can make")
 
-    # TODO: implement no-load and dont-show-plots handling
     parser.add_argument("--dont-show-plots", action="store_const", const=True, default=False, help="don't show plots, when simulations finish")
     parser.add_argument("--no-load", action="store_const", const=True, default=False, help="if present, script will not load previous simulations results before running new ones")
 
@@ -140,8 +142,8 @@ def main():
     csv_dir = args.csv_dir
     plot_dir = args.plot_dir
     # TODO: implement these flags:
-    #parser.add_argument("--dont-show-plots", action="store_const", const=True, default=False, help="don't show plots, when simulations finish")
-    #parser.add_argument("--no-load", action="store_const", const=True, default=False, help="if present, script will not load previous simulations results before running new ones")
+    dont_show_plots = args.dont_show_plots
+    no_load = args.no_load
 
     # TODO: move this code to Plot class as a static method
     # build range with varying step size
@@ -175,13 +177,12 @@ def main():
         M = int(percent * N * N)
 
         # load simulations from csv
-        # TODO: Move this pattern matching to Simulation class
         num_saved = 0
-        if csv_dir is not None:
-            name_format = "{}N-{}M.csv".format(N, M)
-            file_path = Path(csv_dir).joinpath(name_format)
+        file_path = Path(csv_dir).resolve()
+        if csv_dir is not None and not no_load:
+            name_format = "{}N-{}M.csv".format(N, M) # TODO: Move this pattern matching to Simulation class
             try:
-                with Path(file_path).open() as sim_file:
+                with file_path.joinpath(name_format).open() as sim_file:
                     for sim_line in sim_file:
                         sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
 
@@ -216,15 +217,18 @@ def main():
                     print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
         print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP))
 
-    if plot_dir is not None:
-        path = Path(plot_dir)
+    if not dont_show_plots:
+        death_rate.plot()
+        death_rate.show()
+        num_iter.plot()
+        num_iter.show()
 
     if plot_dir is not None:
+        path = Path(plot_dir).resolve()
+        print(path)
         death_rate.plot()
         death_rate.save(path, "density-death-")
-
-    if plot_dir is not None:
-        death_rate.plot()
+        num_iter.plot()
         num_iter.save(path, "density-iter-")
 
 
