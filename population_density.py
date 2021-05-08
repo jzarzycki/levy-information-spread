@@ -141,7 +141,6 @@ def main():
 
     csv_dir = args.csv_dir
     plot_dir = args.plot_dir
-    # TODO: implement these flags:
     dont_show_plots = args.dont_show_plots
     no_load = args.no_load
 
