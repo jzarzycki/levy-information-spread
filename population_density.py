@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#BREAKPOINTS   = [0.0, 0.01, 0.02, 0.1, 0.6]
+#STEPS         = [0.0002, 0.001, 0.005, 0.05]
+#file_path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\sim_results") # TODO: argparse
+#path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\plots")
 
 # TODO: better plot points
 # TODO: check if file was written to correctly, and delete a line if it wasn't, or just ignore it and log a message when reading?
@@ -10,7 +14,7 @@ Module for running simulations for multiple values of population density and plo
 # %%
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
-#from argparse import ArgumentParser
+from argparse import ArgumentParser
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -68,19 +72,78 @@ class Plot:
         plt.savefig(file_path)
 
 
+def parse_arguments():
+    parser = ArgumentParser(description=__doc__)
+
+    parser.add_argument("--csv-dir", default=None, help="path to directory, where simulation results are to be kept")
+    parser.add_argument("--plot-dir", default=None, help="path to directory, where plots should be saved")
+
+    parser.add_argument("--breakpoints", type=float, nargs="+", help="points of the plot, where step sizes change")
+    parser.add_argument("--step-sizes", type=float, nargs="+", help="size of the steps between consecutive breakpoints, needs to have one less value than breakpoints")
+    parser.add_argument("--max-iter", type=int, default=10000, help="maximum amount of iterations that a simulation can take, before it gets terminated (defaults to 10 000)")
+    parser.add_argument("--iter-per-step", type=int, default=100, help="number of iterations (defaults to 100)")
+    parser.add_argument("--seed", type=int, default=None, help="integer used to seed the random number generator")
+
+    parser.add_argument("--N", type=int, default=128, help="grid size in x and y axes (defaults to 128)")
+    parser.add_argument("--max-jump", type=int, default=10, help="maximum jump that a walker can make")
+
+    # TODO: implement no-load and dont-show-plots handling
+    parser.add_argument("--dont-show-plots", action="store_const", const=True, default=False, help="don't show plots, when simulations finish")
+    parser.add_argument("--no-load", action="store_const", const=True, default=False, help="if present, script will not load previous simulations results before running new ones")
+
+    args = parser.parse_args()
+
+    if args.csv_dir is not None:
+        directory = Path(args.csv_dir).resolve()
+        if not directory.is_dir():
+            raise NotADirectoryError("{} is not a directory".format((directory)))
+    if args.plot_dir is not None:
+        directory = Path(args.csv_dir).resolve()
+        if not directory.is_dir():
+            raise NotADirectoryError("{} is not a directory".format((directory)))
+
+    if len(args.breakpoints) < 2:
+        raise ValueError("At least two breakpoints need to be supplied (beginning and end)")
+    if len(args.breakpoints) - len(args.step_sizes) != 1:
+        raise ValueError("There needs to be exactly one less step size values supplied than breakpoints")
+    
+    if args.N < 1:
+        raise ValueError("N needs to be bigger than one")
+    if args.max_iter < 1:
+        raise ValueError("max-iter needs to be bigger than one")
+    if args.iter_per_step < 1:
+        raise ValueError("iter-per-step needs to be bigger than one")
+    if args.max_jump < 1:
+        raise ValueError("max-jump needs to be bigger than one")
+
+    return args
+
+
 # %%
 def main():
-    # population density graph config
-    # TODO: get from argparse?
-    SEED          = 123 # TODO: what should I do with this?
-    N             = 128
-    MAX_ITER      = 10000
-    BREAKPOINTS   = [0.0, 0.01, 0.02, 0.1, 0.6]
-    STEPS         = [0.0002, 0.001, 0.005, 0.05]
+
+    args = parse_arguments()
+    print(args) # TODO: delete this
+
+    N             = args.N
+    max_jump      = args.max_jump
+
+    BREAKPOINTS   = args.breakpoints
+    STEPS         = args.step_sizes
     LOW_LIMIT     = BREAKPOINTS[0]
     HIGH_LIMIT    = BREAKPOINTS[-1]
-    ITER_PER_STEP = 400
 
+    SEED          = args.seed # TODO: add option to seed random number generator
+    MAX_ITER      = args.max_iter
+    ITER_PER_STEP = args.iter_per_step
+
+    csv_dir = args.csv_dir
+    plot_dir = args.plot_dir
+    # TODO: implement these flags:
+    #parser.add_argument("--dont-show-plots", action="store_const", const=True, default=False, help="don't show plots, when simulations finish")
+    #parser.add_argument("--no-load", action="store_const", const=True, default=False, help="if present, script will not load previous simulations results before running new ones")
+
+    # TODO: move this code to Plot class as a static method
     # build range with varying step size
     ranges = []
     br_last = LOW_LIMIT
@@ -110,26 +173,26 @@ def main():
 
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)
-        #dead_per_step = np.zeros(ITER_PER_STEP)
 
         # load simulations from csv
         # TODO: Move this pattern matching to Simulation class
-        file_path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\sim_results")
-        name_format = "{}N-{}M.csv".format(N, M)
         num_saved = 0
-        try:
-            with Path(file_path).joinpath(name_format).open() as sim_file:
-                for sim_line in sim_file:
-                    sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
+        if csv_dir is not None:
+            name_format = "{}N-{}M.csv".format(N, M)
+            file_path = Path(csv_dir).joinpath(name_format)
+            try:
+                with Path(file_path).open() as sim_file:
+                    for sim_line in sim_file:
+                        sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
 
-                    death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
-                    num_iter.add_result(sim_i.last_iter)
+                        death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
+                        num_iter.add_result(sim_i.last_iter)
 
-                    num_saved += 1
-                    if num_saved == ITER_PER_STEP:
-                        break
-        except FileNotFoundError:
-            pass
+                        num_saved += 1
+                        if num_saved == ITER_PER_STEP:
+                            break
+            except FileNotFoundError:
+                pass
 
         # run the remaining simulations
         if ITER_PER_STEP > num_saved:
@@ -146,18 +209,23 @@ def main():
                     death_rate.add_result(ts_dead[last_iter] / M if M != 0 else 0)
                     num_iter.add_result(last_iter)
 
-                    sim_i.dump_to_csv(file_path)
+                    if csv_dir is not None:
+                        sim_i.dump_to_csv(file_path)
 
                     num_saved += 1
                     print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
         print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP))
 
-    path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\plots")
-    death_rate.plot()
-    death_rate.save(path, "density-death-")
+    if plot_dir is not None:
+        path = Path(plot_dir)
 
-    num_iter.plot()
-    num_iter.save(path, "density-iter-")
+    if plot_dir is not None:
+        death_rate.plot()
+        death_rate.save(path, "density-death-")
+
+    if plot_dir is not None:
+        death_rate.plot()
+        num_iter.save(path, "density-iter-")
 
 
 # %%
