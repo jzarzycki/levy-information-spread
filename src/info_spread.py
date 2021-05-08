@@ -6,7 +6,7 @@ Information spread model using Lévy Flight random walks.
 
 from pathlib import Path
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser, ArgumentError
+from argparse import ArgumentParser
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ class Simulation(ABC):
 
 
     def run(self, seed: int):
-        # TODO: use/delete the seed param
+        # TODO: use the seed param to seed rng
 
         if self.N <= 0 or self.M <= 0:
             return self
@@ -128,9 +128,7 @@ class Simulation(ABC):
             iteration += 1
 
             if self.logging:
-                # TODO: add argparse option to select between these?
                 print(f"I:{iteration}, healthy: {self.M - n_sick - n_dead}, sick:{n_sick}, dead:{n_dead}")
-                #print(f"I:{iteration}, sick:{round(n_sick / self.M * 100, 2)}%, dead:{round(n_dead / self.M * 100, 2)}%.")
 
         self.last_iter = iteration - 1
         return self
@@ -189,7 +187,7 @@ class SimulationB(Simulation):
 def parse_arguments():
     parser = ArgumentParser(description=__doc__)
 
-    parser.add_argument("--csv_dir", default=None, help="path to directory, where results should be kept")
+    parser.add_argument("--csv-dir", default=None, help="path to directory, where simulation results are to be kept")
     parser.add_argument("--N", type=int, nargs="?", default=128, help="grid size in x and y axes (defaults to 128)")
     parser.add_argument("--ro", type=float, nargs="?", default=0.1, help="population size (defaults to 0.1)")
     parser.add_argument("--load", action="store_const", const=True, default=False, help="if present, script will load previous simulations results instead of running new ones")
@@ -201,7 +199,7 @@ def parse_arguments():
         if not directory.is_dir():
             raise NotADirectoryError("{} is not a directory".format((directory)))
     elif args.load:
-        raise ArgumentError("Supply a directory with csv results with the --csv_dir flag")
+        raise ValueError("Supply a directory with csv results with the --csv_dir flag")
 
     if args.ro < 0:
         raise ValueError("Population density can't be lower than zero")
@@ -217,7 +215,7 @@ def main():
     M = int(args.ro * N**2)
 
     if args.load:
-        # TODO: let Simulation do this pattern matching
+        # TODO: let Simulation do filename pattern matching
         file_name = "{}N-{}M.csv".format(N, M)
 
         try:
