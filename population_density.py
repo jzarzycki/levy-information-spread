@@ -135,7 +135,7 @@ def main():
     LOW_LIMIT     = BREAKPOINTS[0]
     HIGH_LIMIT    = BREAKPOINTS[-1]
 
-    SEED          = args.seed # TODO: add option to seed random number generator
+    SEED          = args.seed
     MAX_ITER      = args.max_iter
     ITER_PER_STEP = args.iter_per_step
 
