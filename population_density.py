@@ -179,7 +179,6 @@ def main():
         num_saved = 0
         directory = Path(csv_dir).resolve()
         if csv_dir is not None and not no_load:
-            #name_format = "{}N-{}M.csv".format(N, M) # TODO: Move this pattern matching to Simulation class
             csv_path = Simulation.make_file_path(directory, N, M, L)
             try:
                 with csv_path.open() as sim_file:
