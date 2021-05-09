@@ -33,6 +33,27 @@ class Plot:
         self.ts_max       = np.zeros(num_steps)
         self.ts_std       = np.zeros(num_steps)
 
+    @staticmethod(f)
+    def make_plot_steps(breakpoints, steps):
+        """make an np.array out of breakpoints and steps arrays"""
+
+        low_limit = breakpoints[0]
+        high_limit = breakpoints[-1]
+        ranges = []
+        br_last = low_limit
+
+        for br_i, step in zip(breakpoints[1:], steps):
+            _range = np.arange(br_last, br_i, step)
+            ranges.append(_range)
+            br_last = br_i
+
+        if ranges[-1][-1] != high_limit:
+            ranges.append([high_limit])
+
+        percents = np.concatenate(ranges)
+        return percents
+
+
     def add_result(self, num: int):
         self.num_per_step[self.sim_idx] = num
         self.sim_idx += 1
@@ -123,51 +144,39 @@ def main():
     N             = args.N
     L             = args.max_jump
 
-    BREAKPOINTS   = args.breakpoints
-    STEPS         = args.step_sizes
-    LOW_LIMIT     = BREAKPOINTS[0]
-    HIGH_LIMIT    = BREAKPOINTS[-1]
+    breakpoints   = args.breakpoints
+    steps         = args.step_sizes
+    low_limit     = breakpoints[0]
+    high_limit    = breakpoints[-1]
 
-    SEED          = args.seed
-    MAX_ITER      = args.max_iter
-    ITER_PER_STEP = args.iter_per_step
+    seed          = args.seed
+    max_iter      = args.max_iter
+    iter_per_step = args.iter_per_step
 
     csv_dir = args.csv_dir
     plot_dir = args.plot_dir
     dont_show_plots = args.dont_show_plots
     no_load = args.no_load
 
-    # TODO: move this code to Plot class as a static method
-    # build range with varying step size
-    ranges = []
-    br_last = LOW_LIMIT
-
-    for br_i, step in zip(BREAKPOINTS[1:], STEPS):
-        _range = np.arange(br_last, br_i, step)
-        ranges.append(_range)
-        br_last = br_i
-
-    if ranges[-1][-1] != HIGH_LIMIT:
-        ranges.append([HIGH_LIMIT])
-
-    percents = np.concatenate(ranges)
+    percents = Plot.make_plot_steps(breakpoints, steps)(breakpoints, steps)
 
     # building string for logging
     num_steps = len(percents)
     number_of_digits = lambda number: len(str(number))
     current_progress = "\r| {:>" + str(number_of_digits(num_steps)) + "}/" +\
         "{} | " +\
-        "{:>" + str(number_of_digits(int(100*HIGH_LIMIT)) + 3) + ".2f}% | " +\
-        "{:>" + str(number_of_digits(ITER_PER_STEP)) + "}/" +\
-        "{:>" + str(number_of_digits(ITER_PER_STEP)) + "} |"
+        "{:>" + str(number_of_digits(int(100*high_limit)) + 3) + ".2f}% | " +\
+        "{:>" + str(number_of_digits(iter_per_step)) + "}/" +\
+        "{:>" + str(number_of_digits(iter_per_step)) + "} |"
 
     # run simulations
-    death_rate = Plot(percents, steps=STEPS, iter_per_step=ITER_PER_STEP, title="Average death rate")
-    num_iter   = Plot(percents, steps=STEPS, iter_per_step=ITER_PER_STEP, title="Average duration")
+    death_rate = Plot(percents, steps=steps, iter_per_step=iter_per_step, title="Average death rate")
+    num_iter   = Plot(percents, steps=steps, iter_per_step=iter_per_step, title="Average duration")
 
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)
 
+        # TODO: make a static class method for loading from csv dir
         # load simulations from csv
         num_saved = 0
         directory = Path(csv_dir).resolve()
@@ -182,18 +191,18 @@ def main():
                         num_iter.add_result(sim_i.last_iter)
 
                         num_saved += 1
-                        if num_saved == ITER_PER_STEP:
+                        if num_saved == iter_per_step:
                             break
             except FileNotFoundError:
                 pass
 
         # run the remaining simulations
-        if ITER_PER_STEP > num_saved:
-            sim = SimulationA(N=N, M=M, max_iter=MAX_ITER)
+        if iter_per_step > num_saved:
+            sim = SimulationA(N=N, M=M, max_iter=max_iter)
             threads = cpu_count()
             with Pool(threads) as pool:
-                seeds = np.full(ITER_PER_STEP - num_saved, SEED)
-                print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
+                seeds = np.full(iter_per_step - num_saved, seed)
+                print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, iter_per_step), end="")
                 for sim_i in pool.imap_unordered(sim.run, seeds):
                     last_iter = sim_i.last_iter
                     #ts_sick   = sim_i.ts_sick
@@ -206,8 +215,8 @@ def main():
                         sim_i.dump_to_csv(directory)
 
                     num_saved += 1
-                    print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP), end="")
-        print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, ITER_PER_STEP))
+                    print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, iter_per_step), end="")
+        print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, iter_per_step))
 
     if not dont_show_plots:
         death_rate.plot()
