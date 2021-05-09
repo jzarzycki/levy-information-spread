@@ -142,7 +142,6 @@ def parse_arguments():
 def main():
 
     args = parse_arguments()
-    print(args) # TODO: delete this
 
     N             = args.N
     L             = args.max_jump
