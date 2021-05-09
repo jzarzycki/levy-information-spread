@@ -18,7 +18,9 @@ from src.info_spread import Simulation, SimulationA, SimulationB
 # %%
 class Plot:
 
-    def __init__(self, percents: list, steps: list, iter_per_step: int, title: str):
+    def __init__(self, N: int, L: int, percents: list, steps: list, iter_per_step: int, title: str):
+        self.N = N
+        self.L = L
         self.percents     = percents
         self.steps        = steps
         self.iter_per_step= iter_per_step
@@ -71,6 +73,7 @@ class Plot:
 
     def plot(self):
         plt.figure()
+        plt.title("Population density plot for an information spread model\nN:{}, L:{}".format(self.N, self.L))
         plt.xlabel("Pop. density")
         plt.ylabel(self.title)
 
@@ -170,8 +173,8 @@ def main():
         "{:>" + str(number_of_digits(iter_per_step)) + "} |"
 
     # run simulations
-    death_rate = Plot(percents, steps=steps, iter_per_step=iter_per_step, title="Average death rate")
-    num_iter   = Plot(percents, steps=steps, iter_per_step=iter_per_step, title="Average duration")
+    death_rate = Plot(N, L, percents, steps=steps, iter_per_step=iter_per_step, title="Average death rate")
+    num_iter   = Plot(N, L, percents, steps=steps, iter_per_step=iter_per_step, title="Average duration")
 
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)

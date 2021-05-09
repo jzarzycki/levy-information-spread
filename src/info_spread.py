@@ -138,7 +138,7 @@ class Simulation(ABC):
 
     def plot(self):
         plt.figure()
-        plt.title("Information spread simulation")
+        plt.title("Information spread simulation\nN:{}, M:{}, L:{}".format(self.N, self.M, self.max_random_step))
         plt.xlabel("Number of iterations")
         plt.ylabel("% of affected population")
         plt.plot(np.arange(self.last_iter), self.ts_sick[0:self.last_iter]/self.M * 100) # percent
