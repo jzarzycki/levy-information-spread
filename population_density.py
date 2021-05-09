@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-#BREAKPOINTS   = [0.0, 0.01, 0.02, 0.1, 0.6]
-#STEPS         = [0.0002, 0.001, 0.005, 0.05]
-#file_path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\sim_results") # TODO: argparse
-#path = Path("C:\\Users\\janek\\Desktop\\PG\\levy-information-spread\\plots")
-
-# TODO: better plot points
-# TODO: check if file was written to correctly, and delete a line if it wasn't, or just ignore it and log a message when reading?
 
 """
 Module for running simulations for multiple values of population density and plotting their results.
