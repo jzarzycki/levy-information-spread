@@ -179,16 +179,11 @@ def main():
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)
 
-        # TODO: make a static class method for loading from csv dir
         # load simulations from csv
         num_saved = 0
         directory = Path(csv_dir).resolve()
         if csv_dir is not None and not no_load:
-            csv_path = Simulation.make_file_path(directory, N, M, L)
-            try:
-                with csv_path.open() as sim_file:
-                    for sim_line in sim_file:
-                        sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
+            for sim_i in Simulation.load_results_from_csv(directory, N, M, L):
 
                         death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
                         num_iter.add_result(sim_i.last_iter)
@@ -196,8 +191,6 @@ def main():
                         num_saved += 1
                         if num_saved == iter_per_step:
                             break
-            except FileNotFoundError:
-                pass
 
         # run the remaining simulations
         if iter_per_step > num_saved:

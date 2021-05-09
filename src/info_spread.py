@@ -160,6 +160,19 @@ class Simulation(ABC):
         return Path(directory).joinpath("{}N-{}M-{}L.csv".format(N, M, max_step))
 
 
+    @staticmethod
+    def load_results_from_csv(directory, N, M, max_step):
+        csv_path = Simulation.make_file_path(directory, N, M, max_step)
+        try:
+            with csv_path.open() as sim_file:
+                for sim_line in sim_file:
+                    sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
+                    yield sim_i
+
+        except FileNotFoundError:
+            pass
+
+
     def dump_to_csv(self, directory: Path):
         file_path = self.make_file_path(directory, self.N, self.M, self.max_random_step)
         with file_path.open(mode="a") as f:
