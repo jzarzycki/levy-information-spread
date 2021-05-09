@@ -33,7 +33,7 @@ class Plot:
         self.ts_max       = np.zeros(num_steps)
         self.ts_std       = np.zeros(num_steps)
 
-    @staticmethod(f)
+    @staticmethod
     def make_plot_steps(breakpoints, steps):
         """make an np.array out of breakpoints and steps arrays"""
 
@@ -158,7 +158,7 @@ def main():
     dont_show_plots = args.dont_show_plots
     no_load = args.no_load
 
-    percents = Plot.make_plot_steps(breakpoints, steps)(breakpoints, steps)
+    percents = Plot.make_plot_steps(breakpoints, steps)
 
     # building string for logging
     num_steps = len(percents)
