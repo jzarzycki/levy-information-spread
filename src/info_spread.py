@@ -45,7 +45,11 @@ class Simulation(ABC):
             str_sick, str_dead = csv_line[:-1].split(";")
             self.ts_sick = np.array([int(value) for value in str_sick.split(",")])
             self.ts_dead = np.array([int(value) for value in str_dead.split(",")])
-            self.last_iter = len(self.ts_sick) - 1
+
+            len_sick, len_dead = len(self.ts_sick), len(self.ts_dead)
+            if len_sick != len_dead:
+                raise ValueError("ts_sick and ts_dead are not of equal length")
+            self.last_iter = len_sick - 1
 
 
     @abstractmethod
@@ -166,7 +170,7 @@ class Simulation(ABC):
         try:
             with csv_path.open() as sim_file:
                 for sim_line in sim_file:
-                    sim_i = SimulationA(N=N, M=M, csv_line=sim_line)
+                    sim_i = SimulationA(N=N, M=M, max_random_step=max_step, csv_line=sim_line)
                     yield sim_i
 
         except FileNotFoundError:

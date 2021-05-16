@@ -108,18 +108,22 @@ def main():
         num_saved = 0
         directory = Path(csv_dir).resolve()
         if csv_dir is not None and not no_load:
-            for sim_i in Simulation.load_results_from_csv(directory, N, M, L):
+            try:
+                for sim_i in Simulation.load_results_from_csv(directory, N, M, L):
 
-                        death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
-                        num_iter.add_result(sim_i.last_iter)
+                            death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
+                            num_iter.add_result(sim_i.last_iter)
 
-                        num_saved += 1
-                        if num_saved == iter_per_step:
-                            break
+                            num_saved += 1
+                            if num_saved == iter_per_step:
+                                break
+            except ValueError as err:
+                print("Error in csv file: {}".format(Simulation.make_file_path(directory, N, M, L)))
+                raise err
 
         # run the remaining simulations
         if iter_per_step > num_saved:
-            sim = SimulationA(N=N, M=M, max_iter=max_iter)
+            sim = SimulationA(N=N, M=M, max_random_step=L, max_iter=max_iter)
             threads = cpu_count()
             with Pool(threads) as pool:
                 seeds = np.full(iter_per_step - num_saved, seed)
@@ -147,11 +151,10 @@ def main():
 
     if plot_dir is not None:
         path = Path(plot_dir).resolve()
-        print(path)
         death_rate.plot()
-        death_rate.save(path, "density-death-")
+        death_rate.save(path, "density-death-{}N-{}L-".format(death_rate.N, death_rate.L))
         num_iter.plot()
-        num_iter.save(path, "density-iter-")
+        num_iter.save(path, "density-iter-{}N-{}L-".format(death_rate.N, death_rate.L))
 
 
 # %%
