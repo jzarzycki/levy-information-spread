@@ -5,4 +5,4 @@ test_figures/
 plots/
 simulations/
 sim_results/
-get_todos.sh
+*.sh
