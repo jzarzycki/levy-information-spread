@@ -61,7 +61,7 @@ class Simulation(ABC):
         if seed is not None:
             np.random.seed(seed)
 
-        if self.N <= 0 or self.M <= 0:
+        if self.N <= 0 or self.M <= 0 or self.M == 1:
             return self
 
         x, y   = np.zeros(self.M, dtype=int), np.zeros(self.M, dtype=int)
@@ -82,7 +82,7 @@ class Simulation(ABC):
         n_heal, n_sick, n_dead, iteration = self.M - 1, 1, 0, 0
         infected_index.add(jj)
 
-        while (n_sick != 0) and (n_heal + n_sick != 1) and (iteration < self.max_iter):
+        while (n_sick != 0) and (iteration < self.max_iter):
 
             for j in infected_index:
 
