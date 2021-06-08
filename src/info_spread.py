@@ -86,32 +86,31 @@ class Simulation(ABC):
 
             for j in infected_index:
 
-                if infect[j] == self.INFECTED:
-                    # move
-                    position_index.remove_index((x[j], y[j]), j)
-                    new_x = (x[j] + self.random_walk.random_step()) % self.N
-                    new_y = (y[j] + self.random_walk.random_step()) % self.N
-                    x[j] = new_x
-                    y[j] = new_y
-                    position_index.append_index((new_x, new_y), j)
+                # move
+                position_index.remove_index((x[j], y[j]), j)
+                new_x = (x[j] + self.random_walk.random_step()) % self.N
+                new_y = (y[j] + self.random_walk.random_step()) % self.N
+                x[j] = new_x
+                y[j] = new_y
+                position_index.append_index((new_x, new_y), j)
 
-                    # save which walkers changed status
-                    same_position = position_index[(x[j], y[j])]
-                    for k in same_position:
-                        # if an infected person meets a susceptible person, infect them
-                        if infect[k] == self.SUSCEPTIBLE and j != k:
-                            new_infected.add(k)
-                        # if an infected person meets a recovered person, they both become recovered
-                        elif infect[k] == self.RECOVERED and j != k:
+                # save which walkers changed status
+                same_position = position_index[(x[j], y[j])]
+                for k in same_position:
+                    # if an infected person meets a susceptible person, infect them
+                    if infect[k] == self.SUSCEPTIBLE and j != k:
+                        new_infected.add(k)
+                    # if an infected person meets a recovered person, they both become recovered
+                    elif infect[k] == self.RECOVERED and j != k:
+                        new_recovered.add(j)
+                    # if two infected people meet both/one of them become recovered (depends on model)
+                    elif infect[k] == self.INFECTED and j != k:
+                        status1, status2 = self.handle_two_infected_meet()
+
+                        if status1 == self.RECOVERED:
                             new_recovered.add(j)
-                        # if two infected people meet both/one of them become recovered (depends on model)
-                        elif infect[k] == self.INFECTED and j != k:
-                            status1, status2 = self.handle_two_infected_meet()
-
-                            if status1 == self.RECOVERED:
-                                new_recovered.add(j)
-                            if status2 == self.RECOVERED:
-                                new_recovered.add(k)
+                        if status2 == self.RECOVERED:
+                            new_recovered.add(k)
 
             # update walker statuses
             for idx in new_infected:
