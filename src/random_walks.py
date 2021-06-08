@@ -45,8 +45,8 @@ if __name__ == '__main__':
     for value in random_steps:
         count[abs(value) - 1] += 1
 
-    plt.title("Distribution of random values from 1 to {}".format(max_val))
-    plt.xlabel("Value")
-    plt.ylabel("Number of occurrences")
+    plt.title("Rozkład wylosowanych wartości dla max_val={}".format(max_val))
+    plt.xlabel("Wartości")
+    plt.ylabel("Ilość wystąpień")
     plt.plot(np.arange(1, max_val + 1), count)
     plt.show()

@@ -61,7 +61,7 @@ class Simulation(ABC):
         if seed is not None:
             np.random.seed(seed)
 
-        if self.N <= 0 or self.M <= 0 or self.M == 1:
+        if self.N <= 0 or self.M <= 1:
             return self
 
         x, y   = np.zeros(self.M, dtype=int), np.zeros(self.M, dtype=int)
@@ -244,7 +244,7 @@ def main():
     L = args.max_random_step
 
     if args.load:
-        file_name = self.make_file_path(directory, N, M, self.max_random_step)
+        file_name = Simulation.make_file_path(directory, N, M, L)
 
         try:
             with directory.joinpath(file_name).open() as f:

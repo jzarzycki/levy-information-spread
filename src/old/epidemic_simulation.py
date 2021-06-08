@@ -18,13 +18,10 @@ class Simulation:
     INFECTED = 1
     HEALTHY  = 2
 
-    # plot data
-    LAST_ITER = 0
-
 
     def __init__(self, N, M, L, max_iter, logging=False):
-        self.N        = N     # grid size
-        self.M        = M    # population size
+        self.N        = N      # grid size
+        self.M        = M      # population size
         self.L        = L      # lifespan
         self.max_iter = max_iter
         self.logging = logging
@@ -32,10 +29,10 @@ class Simulation:
         # plot data
         self.TS_SICK  = np.zeros(self.max_iter)
         self.TS_DEAD = np.zeros(self.max_iter)
+        self.LAST_ITER = 0
 
 
     def run(self, seed):
-        # TODO: SEED RANDOM NUMBER GENERATOR!!!
 
         if self.N <= 0 or self.M <= 0:
             return {
@@ -83,12 +80,7 @@ class Simulation:
                     person["y"] = min(self.N, max(person["y"], 1))
 
             # deal with infected
-            # TODO: Test if removing dead population to speed up later iterations is worth it
-            # TODO: Research optimal sorting algorithm (might be different for levy flights)
-            #       from what I remember quick sort tends to be slow with pre-sorted data,
-            #       so we could improve here
             infected_coords = None
-            # on any given coordinates the infected are guaranteed to appear before the healthy
             population.sort(order=["x", "y", "infect"])
             for person in population:
                 if person["infect"] == self.DEAD:
@@ -106,7 +98,7 @@ class Simulation:
                 elif person["infect"] == self.HEALTHY:
                     if (person["x"], person["y"]) == infected_coords:
                         person["infect"] = self.INFECTED
-                        person["lifespan"] = self.L # not needed?
+                        person["lifespan"] = self.L
                         n_sick += 1
 
             # save plot data
@@ -123,9 +115,9 @@ class Simulation:
                 "TS_DEAD": self.TS_DEAD
         }
 
+
     def show_plot(self):
-        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
-        # plt.plot(range(0, self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10])
+        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100)
         plt.show()
 
 
@@ -133,8 +125,7 @@ class Simulation:
         files = glob.glob(path + "*.png")
         num = len(files) + 1
 
-        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100) # percent
-        # plt.plot(range(0, self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10])
+        plt.plot(np.arange(self.LAST_ITER + 10), self.TS_SICK[0:self.LAST_ITER + 10]/self.M * 100)
         plt.savefig(path + str(num) + ".png")
 
 
