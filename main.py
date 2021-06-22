@@ -98,8 +98,10 @@ def main():
         "{:>" + str(number_of_digits(iter_per_step)) + "} |"
 
     # run simulations
-    death_rate = Plot(N, L, percents, steps=steps, iter_per_step=iter_per_step, title="Average death rate")
-    num_iter   = Plot(N, L, percents, steps=steps, iter_per_step=iter_per_step, title="Average duration")
+    death_rate = Plot(N, L, percents, steps=steps,
+        iter_per_step=iter_per_step, title="Average death rate")
+    num_iter   = Plot(N, L, percents, steps=steps,
+        iter_per_step=iter_per_step, title="Average duration")
 
     for iteration, percent in enumerate(percents):
         M = int(percent * N * N)
@@ -109,39 +111,71 @@ def main():
         directory = Path(csv_dir).resolve()
         if csv_dir is not None and not no_load:
             try:
-                for sim_i in Simulation.load_results_from_csv(directory, N, M, L):
+                for sim_i in Simulation.load_results_from_csv(
+                    directory, N, M, L):
 
-                            death_rate.add_result(sim_i.ts_dead[sim_i.last_iter] / M if M != 0 else 0)
+                            death_rate.add_result(
+                                sim_i.ts_dead[sim_i.last_iter] / M
+                                if M != 0
+                                else 0
+                            )
                             num_iter.add_result(sim_i.last_iter)
 
                             num_saved += 1
                             if num_saved == iter_per_step:
                                 break
             except ValueError as err:
-                print("Error in csv file: {}".format(Simulation.make_file_path(directory, N, M, L)))
+                print("Error in csv file: {}".format(
+                    Simulation.make_file_path(directory, N, M, L))
+                )
                 raise err
 
         # run the remaining simulations
         if iter_per_step > num_saved:
-            sim = SimulationA(N=N, M=M, max_random_step=L, max_iter=max_iter)
+            sim = SimulationA(
+                N=N, M=M, max_random_step=L, max_iter=max_iter
+            )
             threads = cpu_count()
             with Pool(threads) as pool:
                 seeds = np.full(iter_per_step - num_saved, seed)
-                print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, iter_per_step), end="")
+                print(current_progress.format(
+                    iteration +  1,
+                    num_steps,
+                    percent * 100,
+                    num_saved,
+                    iter_per_step),
+                end="")
+
                 for sim_i in pool.imap_unordered(sim.run, seeds):
                     last_iter = sim_i.last_iter
-                    #ts_sick   = sim_i.ts_sick
                     ts_dead   = sim_i.ts_dead
 
-                    death_rate.add_result(ts_dead[last_iter] / M if M != 0 else 0)
+                    death_rate.add_result(
+                        ts_dead[last_iter] / M
+                        if M != 0
+                        else 0
+                    )
                     num_iter.add_result(last_iter)
 
                     if csv_dir is not None:
                         sim_i.dump_to_csv(directory)
 
                     num_saved += 1
-                    print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, iter_per_step), end="")
-        print(current_progress.format(iteration +  1, num_steps, percent * 100, num_saved, iter_per_step))
+                    print(current_progress.format(
+                        iteration +  1,
+                        num_steps,
+                        percent * 100,
+                        num_saved,
+                        iter_per_step
+                        ),
+                    end="")
+        print(current_progress.format(
+            iteration +  1,
+            num_steps,
+            percent * 100,
+            num_saved,
+            iter_per_step)
+        )
 
     if not dont_show_plots:
         death_rate.plot()
@@ -152,9 +186,19 @@ def main():
     if plot_dir is not None:
         path = Path(plot_dir).resolve()
         death_rate.plot()
-        death_rate.save(path, "density-death-{}N-{}L-".format(death_rate.N, death_rate.L))
+        death_rate.save(
+            path,
+            "density-death-{}N-{}L-".format(
+                death_rate.N, death_rate.L
+            )
+        )
         num_iter.plot()
-        num_iter.save(path, "density-iter-{}N-{}L-".format(death_rate.N, death_rate.L))
+        num_iter.save(
+            path,
+            "density-iter-{}N-{}L-".format(
+                death_rate.N, death_rate.L
+            )
+        )
 
 
 # %%
