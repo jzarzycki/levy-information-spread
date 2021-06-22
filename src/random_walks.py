@@ -1,8 +1,21 @@
+from abc import ABC, abstractmethod
+from typing import overload
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Levy:
+class RandomWalk(ABC):
+
+    @abstractmethod
+    def random_step(self):
+        pass
+
+    @abstractmethod
+    def get_name(self):
+        pass
+
+
+class Levy(RandomWalk):
 
     def __init__(self, max_val):
         self.__max_val = max_val
@@ -30,15 +43,21 @@ class Levy:
         return direction * self.__max_val
 
 
-class Brownian:
+    def get_name(self):
+        return "levy"
+
+
+class Brownian(RandomWalk):
 
     def __init__(self, step_size=1):
         self.step_size = step_size
 
-
     def random_step(self):
         direction = np.random.choice([-1, 1])
         return direction * self.step_size
+
+    def get_name(self):
+        return "brown"
 
 
 if __name__ == '__main__':
@@ -61,3 +80,5 @@ if __name__ == '__main__':
     plt.ylabel("Ilość wystąpień")
     plt.plot(np.arange(1, max_val + 1), count)
     plt.show()
+
+    # TODO: add plot of Gaussian distribution in Brownian motion in one axis

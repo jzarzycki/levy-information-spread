@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from src.info_spread import Simulation, SimulationA, SimulationB
 from src.population_density import Plot
+from src.random_walks import Levy, Brownian
 
 
 # %%
@@ -32,6 +33,7 @@ def parse_arguments():
 
     parser.add_argument("--N", type=int, default=128, help="grid size in x and y axes (defaults to 128)")
     parser.add_argument("--max-jump", type=int, default=10, help="maximum jump that a walker can make")
+    parser.add_argument("--brownian", action="store_const", const=True, default=False, help="use Brownian motion instead of Levy Flight")
 
     parser.add_argument("--dont-show-plots", action="store_const", const=True, default=False, help="don't show plots, when simulations finish")
     parser.add_argument("--no-load", action="store_const", const=True, default=False, help="if present, script will not load previous simulations results before running new ones")
@@ -77,6 +79,8 @@ def main():
     low_limit     = breakpoints[0]
     high_limit    = breakpoints[-1]
 
+    brownian      = args.brownian
+    random_walk   = Brownian(L) if brownian else Levy(L)
     seed          = args.seed
     max_iter      = args.max_iter
     iter_per_step = args.iter_per_step
@@ -98,6 +102,7 @@ def main():
         "{:>" + str(number_of_digits(iter_per_step)) + "} |"
 
     # run simulations
+    # TODO: dodaj rozróżnienie brownian/levy
     death_rate = Plot(N, L, percents, steps=steps,
         iter_per_step=iter_per_step, title="Average death rate")
     num_iter   = Plot(N, L, percents, steps=steps,
@@ -112,7 +117,7 @@ def main():
         if csv_dir is not None and not no_load:
             try:
                 for sim_i in Simulation.load_results_from_csv(
-                    directory, N, M, L):
+                    directory, random_walk, N, M, L):
 
                             death_rate.add_result(
                                 sim_i.ts_dead[sim_i.last_iter] / M
@@ -126,14 +131,14 @@ def main():
                                 break
             except ValueError as err:
                 print("Error in csv file: {}".format(
-                    Simulation.make_file_path(directory, N, M, L))
+                    Simulation.make_file_path(directory, random_walk, N, M, L))
                 )
                 raise err
 
         # run the remaining simulations
         if iter_per_step > num_saved:
             sim = SimulationA(
-                N=N, M=M, max_random_step=L, max_iter=max_iter
+                N=N, M=M, max_random_step=L, brownian=brownian, max_iter=max_iter
             )
             threads = cpu_count()
             with Pool(threads) as pool:
@@ -188,15 +193,15 @@ def main():
         death_rate.plot()
         death_rate.save(
             path,
-            "density-death-{}N-{}L-".format(
-                death_rate.N, death_rate.L
+            "density-death-{}-{}N-{}L-".format(
+                random_walk.get_name(), death_rate.N, death_rate.L
             )
         )
         num_iter.plot()
         num_iter.save(
             path,
-            "density-iter-{}N-{}L-".format(
-                death_rate.N, death_rate.L
+            "density-iter-{}-{}N-{}L-".format(
+                random_walk.get_name(), death_rate.N, death_rate.L
             )
         )
 

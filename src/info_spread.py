@@ -13,10 +13,12 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     from index import PositionIndex
-    from random_walks import Levy
+    from random_walks import Levy, Brownian
+    from random_walks import RandomWalk
 else:
     from src.index import PositionIndex
-    from src.random_walks import Levy
+    from src.random_walks import Levy, Brownian
+    from src.random_walks import RandomWalk
 
 
 class Simulation(ABC):
@@ -26,13 +28,15 @@ class Simulation(ABC):
     RECOVERED   = 2
 
 
-    def __init__(self, N: int=None, M: int=None, max_random_step: int=10,
-                    max_iter: int=10000, logging: bool=False, csv_line: str=None):
+    def __init__(self, N: int=None, M: int=None, max_random_step: int=10, brownian: bool=False,
+                max_iter: int=10000, logging: bool=False, csv_line: str=None):
         self.N = N
         self.M = M
 
         self.max_random_step = max_random_step
-        self.random_walk = Levy(max_random_step)
+
+        random_walk = Brownian if brownian else Levy
+        self.random_walk = random_walk(max_random_step)
 
         if csv_line is None:
             self.max_iter = max_iter
@@ -140,8 +144,15 @@ class Simulation(ABC):
 
 
     def plot(self):
+        if type(self.random_walk) is Levy:
+            walk_name = "Levy flight"
+        elif type(self.random_walk) is Brownian:
+            walk_name = "Brownian Motion"
+        else:
+            raise NotImplementedError
+
         plt.figure()
-        plt.title("Information spread simulation\nN:{}, M:{}, L:{}".format(self.N, self.M, self.max_random_step))
+        plt.title("Information spread simulation, {}\nN:{}, M:{}, L:{}".format(walk_name, self.N, self.M, self.max_random_step))
         plt.xlabel("Number of iterations")
         plt.ylabel("% of affected population")
         plt.plot(np.arange(self.last_iter), self.ts_sick[0:self.last_iter]/self.M * 100) # percent
@@ -159,17 +170,20 @@ class Simulation(ABC):
 
     
     @staticmethod
-    def make_file_path(directory, N, M, max_step):
-        return Path(directory).joinpath("{}N-{}M-{}L.csv".format(N, M, max_step))
+    def make_file_path(directory, random_walk: RandomWalk, N, M, max_step):
+        walk_name = random_walk.get_name()
+        return Path(directory).joinpath("{}-{}N-{}M-{}L.csv".format(walk_name, N, M, max_step))
 
 
     @staticmethod
-    def load_results_from_csv(directory, N, M, max_step):
-        csv_path = Simulation.make_file_path(directory, N, M, max_step)
+    def load_results_from_csv(directory, random_walk, N, M, max_step):
+        csv_path = Simulation.make_file_path(directory, random_walk, N, M, max_step)
+        is_brownian = type(random_walk) is Brownian
         try:
             with csv_path.open() as sim_file:
                 for sim_line in sim_file:
-                    sim_i = SimulationA(N=N, M=M, max_random_step=max_step, csv_line=sim_line)
+                    # TODO: add option to choose Simulation A or B
+                    sim_i = SimulationA(N=N, M=M, max_random_step=max_step, csv_line=sim_line, brownian=is_brownian)
                     yield sim_i
 
         except FileNotFoundError:
@@ -177,7 +191,7 @@ class Simulation(ABC):
 
 
     def dump_to_csv(self, directory: Path):
-        file_path = self.make_file_path(directory, self.N, self.M, self.max_random_step)
+        file_path = self.make_file_path(directory, self.random_walk, self.N, self.M, self.max_random_step)
         with file_path.open(mode="a") as f:
 
             for idx in np.arange(self.last_iter):
@@ -215,6 +229,7 @@ def parse_arguments():
     parser.add_argument("--ro", type=float, nargs="?", default=0.1, help="population size (defaults to 0.1)")
     parser.add_argument("--max-random-step", type=int, default=10, help="maximum step size, that an actor can make")
     parser.add_argument("--load", action="store_const", const=True, default=False, help="if present, script will load previous simulations results instead of running new ones")
+    parser.add_argument("--brownian", action="store_const", const=True, default=False, help="use Brownian motion instead of Levy Flight")
 
     args = parser.parse_args()
 
@@ -241,21 +256,23 @@ def main():
     N = args.N
     M = int(args.ro * N**2)
     L = args.max_random_step
+    brownian = args.brownian
 
     if args.load:
-        file_name = Simulation.make_file_path(directory, N, M, L)
+        random_walk = Brownian(L) if brownian else Levy(L)
+        file_name = Simulation.make_file_path(directory, random_walk, N, M, L)
 
         try:
             with directory.joinpath(file_name).open() as f:
                 for line in f:
-                    simulation = SimulationA(N=N, M=M, csv_line=line)
+                    simulation = SimulationA(N=N, M=M, csv_line=line, brownian=brownian)
                     simulation.plot()
                     simulation.show()
         except FileNotFoundError:
             print("There aren't any simulations of this kind yet.")
 
     else:
-        simulation = SimulationA(N=N, M=M, max_random_step=L, max_iter=10000, logging=True)
+        simulation = SimulationA(N=N, M=M, max_random_step=L, brownian=brownian ,max_iter=10000, logging=True)
         simulation.run(123)
 
         if args.csv_dir is not None:

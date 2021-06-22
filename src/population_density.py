@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 class Plot:
 
-    def __init__(self, N: int, L: int, percents: list, steps: list, iter_per_step: int, title: str):
+    def __init__(self, N: int, L: int, percents: list, steps: list, iter_per_step: int, title: str, brownian: bool=False):
         self.N = N
         self.L = L
         self.percents     = percents
@@ -66,8 +66,14 @@ class Plot:
         self.current_step += 1
 
     def plot(self):
+        if type(self.random_walk) is Levy:
+            walk_name = "Levy flight"
+        elif type(self.random_walk) is Brownian:
+            walk_name = "Brownian Motion"
+        else:
+            raise NotImplementedError
         plt.figure()
-        plt.title("Population density plot for an information spread model\nN:{}, L:{}".format(self.N, self.L))
+        plt.title("Population density plot for an information spread model\n{}, N:{}, L:{}".format(walk_name, self.N, self.L))
         plt.xlabel("Pop. density")
         plt.ylabel(self.title)
 
