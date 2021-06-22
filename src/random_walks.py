@@ -30,6 +30,17 @@ class Levy:
         return direction * self.__max_val
 
 
+class Brownian:
+
+    def __init__(self, step_size=1):
+        self.step_size = step_size
+
+
+    def random_step(self):
+        direction = np.random.choice([-1, 1])
+        return direction * self.step_size
+
+
 if __name__ == '__main__':
     N = 10 ** 5
     max_val = 10
